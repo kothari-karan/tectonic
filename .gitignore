@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Node
+node_modules/
+.next/
+out/
+.turbo/
+coverage/
+
+# Hardhat
+packages/contracts/artifacts/
+packages/contracts/cache/
+packages/contracts/typechain-types/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Playwright
+packages/web/test-results/
+packages/web/playwright-report/
+
+# Alembic
+packages/api/alembic/versions/*.pyc
