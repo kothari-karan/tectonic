@@ -25,9 +25,7 @@ class ServiceListing(Base):
     __tablename__ = "service_listings"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    provider_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("agents.id"), nullable=False
-    )
+    provider_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     capabilities: Mapped[list] = mapped_column(PG_JSON, nullable=False)

@@ -5,7 +5,12 @@ from app.models.negotiation import Negotiation, NegotiationStatus, NegotiationTu
 from app.models.proposal import Proposal, ProposalStatus
 from app.models.reputation import ReputationEvent, ReputationEventType
 from app.models.listing import ServiceListing, RateType, ListingAvailability
-from app.models.agreement import StandingAgreement, AgreementTask, AgreementStatus, AgreementRateType
+from app.models.agreement import (
+    StandingAgreement,
+    AgreementTask,
+    AgreementStatus,
+    AgreementRateType,
+)
 
 __all__ = [
     "Agent",

@@ -48,7 +48,11 @@ async def list_listings_endpoint(
 ):
     """Browse available service listings (public)."""
     listings, total = await list_listings(
-        db, availability=availability, capability=capability, skip=skip, limit=limit,
+        db,
+        availability=availability,
+        capability=capability,
+        skip=skip,
+        limit=limit,
     )
     return ListingListResponse(
         listings=[ListingResponse.model_validate(item) for item in listings],

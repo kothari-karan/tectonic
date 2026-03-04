@@ -51,9 +51,7 @@ async def record_event(
 
 async def calculate_score(agent_id: uuid.UUID, db: AsyncSession) -> float:
     """Calculate an agent's total reputation score from all events."""
-    result = await db.execute(
-        select(ReputationEvent).where(ReputationEvent.agent_id == agent_id)
-    )
+    result = await db.execute(select(ReputationEvent).where(ReputationEvent.agent_id == agent_id))
     events = result.scalars().all()
 
     total = 0.0
@@ -63,9 +61,7 @@ async def calculate_score(agent_id: uuid.UUID, db: AsyncSession) -> float:
     return total
 
 
-async def get_agent_reputation(
-    agent_id: uuid.UUID, db: AsyncSession
-) -> dict:
+async def get_agent_reputation(agent_id: uuid.UUID, db: AsyncSession) -> dict:
     """Get an agent's reputation details."""
     agent = await db.get(Agent, agent_id)
     if agent is None:

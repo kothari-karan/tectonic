@@ -50,8 +50,12 @@ async def list_engagements_endpoint(
     Use GET /agents/{id}/inbox to retrieve targeted engagements.
     """
     engagements, total = await list_engagements(
-        db, status_filter=status, category=category, requester_id=requester_id,
-        skip=skip, limit=limit,
+        db,
+        status_filter=status,
+        category=category,
+        requester_id=requester_id,
+        skip=skip,
+        limit=limit,
     )
     return EngagementListResponse(
         engagements=[EngagementResponse.model_validate(e) for e in engagements],
@@ -85,10 +89,7 @@ async def get_engagement_endpoint(
 
     agent_id_str = str(agent.id)
     is_requester = str(engagement.requester_id) == agent_id_str
-    is_target = (
-        engagement.target_provider_ids
-        and agent_id_str in engagement.target_provider_ids
-    )
+    is_target = engagement.target_provider_ids and agent_id_str in engagement.target_provider_ids
 
     if not is_requester and not is_target:
         raise HTTPException(

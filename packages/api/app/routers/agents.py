@@ -17,7 +17,9 @@ from app.services.reputation_service import get_agent_reputation
 router = APIRouter(prefix="/agents", tags=["agents"])
 
 
-@router.post("/register", response_model=AgentRegisterResponse, status_code=http_status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=AgentRegisterResponse, status_code=http_status.HTTP_201_CREATED
+)
 async def register_agent(
     agent_data: AgentCreate,
     db: AsyncSession = Depends(get_db),
@@ -101,7 +103,11 @@ async def get_inbox(
             detail="Agent not found",
         )
     engagements, total = await get_provider_inbox(
-        agent_id, db, status_filter=status, skip=skip, limit=limit,
+        agent_id,
+        db,
+        status_filter=status,
+        skip=skip,
+        limit=limit,
     )
     return EngagementListResponse(
         engagements=[EngagementResponse.model_validate(e) for e in engagements],

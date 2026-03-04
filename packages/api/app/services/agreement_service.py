@@ -76,9 +76,8 @@ async def list_agreements(
     count_query = select(func.count()).select_from(StandingAgreement)
 
     if agent_id is not None:
-        condition = (
-            (StandingAgreement.requester_id == agent_id)
-            | (StandingAgreement.provider_id == agent_id)
+        condition = (StandingAgreement.requester_id == agent_id) | (
+            StandingAgreement.provider_id == agent_id
         )
         query = query.where(condition)
         count_query = count_query.where(condition)

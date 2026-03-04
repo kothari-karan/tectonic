@@ -4,7 +4,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.routers import agents, agreements, bounties as engagements, contracts, listings, negotiations, proposals
+from app.routers import (
+    agents,
+    agreements,
+    bounties as engagements,
+    contracts,
+    listings,
+    negotiations,
+    proposals,
+)
 
 
 @asynccontextmanager

@@ -87,7 +87,9 @@ async def create_negotiation(
         proposal_id=negotiation.proposal_id,
         requester_id=negotiation.requester_id,
         provider_id=negotiation.provider_id,
-        status=negotiation.status.value if hasattr(negotiation.status, "value") else str(negotiation.status),
+        status=negotiation.status.value
+        if hasattr(negotiation.status, "value")
+        else str(negotiation.status),
         current_terms=negotiation.current_terms,
         turn_count=negotiation.turn_count,
         max_turns=negotiation.max_turns,
@@ -125,7 +127,9 @@ async def get_negotiation(
         proposal_id=negotiation.proposal_id,
         requester_id=negotiation.requester_id,
         provider_id=negotiation.provider_id,
-        status=negotiation.status.value if hasattr(negotiation.status, "value") else str(negotiation.status),
+        status=negotiation.status.value
+        if hasattr(negotiation.status, "value")
+        else str(negotiation.status),
         current_terms=negotiation.current_terms,
         turn_count=negotiation.turn_count,
         max_turns=negotiation.max_turns,

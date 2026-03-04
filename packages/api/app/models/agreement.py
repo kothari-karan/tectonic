@@ -25,12 +25,8 @@ class StandingAgreement(Base):
     __tablename__ = "standing_agreements"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    requester_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("agents.id"), nullable=False
-    )
-    provider_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("agents.id"), nullable=False
-    )
+    requester_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
+    provider_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     scope_description: Mapped[str] = mapped_column(Text, nullable=False)
     rate_type: Mapped[AgreementRateType] = mapped_column(
@@ -68,9 +64,7 @@ class AgreementTask(Base):
     agreement_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("standing_agreements.id"), nullable=False
     )
-    engagement_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("engagements.id"), nullable=False
-    )
+    engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagements.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

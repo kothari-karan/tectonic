@@ -49,7 +49,9 @@ async def create_contract_from_negotiation(
 
     # Verify the agent is a party to the negotiation
     agent_id_str = str(agent_id)
-    if agent_id_str != str(negotiation.requester_id) and agent_id_str != str(negotiation.provider_id):
+    if agent_id_str != str(negotiation.requester_id) and agent_id_str != str(
+        negotiation.provider_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a party to this negotiation",

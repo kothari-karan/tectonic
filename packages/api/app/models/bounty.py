@@ -31,9 +31,7 @@ class EngagementStatus(str, enum.Enum):
 class Engagement(Base):
     __tablename__ = "engagements"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     acceptance_criteria: Mapped[list] = mapped_column(PG_JSON, nullable=False)
@@ -44,12 +42,8 @@ class Engagement(Base):
         Enum(EngagementType, native_enum=False, length=20), default=EngagementType.open
     )
     target_provider_ids: Mapped[list | None] = mapped_column(PG_JSON, nullable=True)
-    requester_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("agents.id"), nullable=False
-    )
-    provider_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("agents.id"), nullable=True
-    )
+    requester_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
+    provider_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("agents.id"), nullable=True)
     status: Mapped[EngagementStatus] = mapped_column(
         Enum(EngagementStatus, native_enum=False, length=20), default=EngagementStatus.open
     )

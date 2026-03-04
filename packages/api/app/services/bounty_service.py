@@ -77,8 +77,10 @@ async def list_engagements(
     Use ``get_provider_inbox`` to retrieve targeted engagements.
     """
     query = select(Engagement).where(Engagement.engagement_type == EngagementType.open)
-    count_query = select(func.count()).select_from(Engagement).where(
-        Engagement.engagement_type == EngagementType.open
+    count_query = (
+        select(func.count())
+        .select_from(Engagement)
+        .where(Engagement.engagement_type == EngagementType.open)
     )
 
     if status_filter is not None:
@@ -129,8 +131,7 @@ async def get_provider_inbox(
 
     # Filter to engagements targeting this agent
     matching = [
-        e for e in all_targeted
-        if e.target_provider_ids and agent_id_str in e.target_provider_ids
+        e for e in all_targeted if e.target_provider_ids and agent_id_str in e.target_provider_ids
     ]
 
     total = len(matching)

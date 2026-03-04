@@ -18,9 +18,7 @@ class AgentType(str, enum.Enum):
 class Agent(Base):
     __tablename__ = "agents"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     agent_type: Mapped[AgentType] = mapped_column(
         Enum(AgentType, native_enum=False, length=20), nullable=False

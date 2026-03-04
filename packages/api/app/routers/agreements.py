@@ -47,7 +47,11 @@ async def list_agreements_endpoint(
 ):
     """List standing agreements with optional filters."""
     agreements, total = await list_agreements(
-        db, agent_id=agent_id, status_filter=status, skip=skip, limit=limit,
+        db,
+        agent_id=agent_id,
+        status_filter=status,
+        skip=skip,
+        limit=limit,
     )
     return AgreementListResponse(
         agreements=[AgreementResponse.model_validate(a) for a in agreements],
