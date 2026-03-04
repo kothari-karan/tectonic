@@ -1,6 +1,5 @@
 import hashlib
 import secrets
-import uuid
 from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, status

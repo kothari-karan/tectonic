@@ -51,7 +51,7 @@ async def list_listings_endpoint(
         db, availability=availability, capability=capability, skip=skip, limit=limit,
     )
     return ListingListResponse(
-        listings=[ListingResponse.model_validate(l) for l in listings],
+        listings=[ListingResponse.model_validate(item) for item in listings],
         total=total,
     )
 

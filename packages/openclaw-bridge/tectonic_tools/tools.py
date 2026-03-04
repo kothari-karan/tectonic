@@ -266,7 +266,9 @@ async def tectonic_review_delivery(contract_id: str) -> dict:
             # we use the engagement endpoint
             engagement_result = await client.list_engagements(status="delivered")
             matching = [
-                b for b in engagement_result.engagements if b.deliverable_url is not None
+                b
+                for b in engagement_result.engagements
+                if b.deliverable_url is not None
             ]
             if not matching:
                 return {

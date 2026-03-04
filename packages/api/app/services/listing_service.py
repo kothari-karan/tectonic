@@ -75,8 +75,8 @@ async def list_listings(
     # Filter by capability in Python (JSON array containment varies by DB)
     if capability is not None:
         listings = [
-            l for l in listings
-            if l.capabilities and capability in l.capabilities
+            item for item in listings
+            if item.capabilities and capability in item.capabilities
         ]
 
     count_result = await db.execute(count_query)

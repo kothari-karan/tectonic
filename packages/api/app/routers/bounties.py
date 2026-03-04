@@ -17,7 +17,6 @@ from app.schemas.bounty import (
 from app.services.bounty_service import (
     create_engagement,
     get_engagement,
-    get_provider_inbox,
     list_engagements,
     update_engagement_status,
 )

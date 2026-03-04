@@ -1,7 +1,6 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Query
-from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.api_key import get_current_agent

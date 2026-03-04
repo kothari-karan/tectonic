@@ -26,4 +26,8 @@ __all__ = [
     "ServiceListing",
     "RateType",
     "ListingAvailability",
+    "StandingAgreement",
+    "AgreementTask",
+    "AgreementStatus",
+    "AgreementRateType",
 ]
