@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - "packages/contracts/**"
+      - ".claude/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

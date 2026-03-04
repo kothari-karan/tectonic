@@ -10,6 +10,7 @@ on:
     paths:
       - "packages/api/**"
       - "tests/integration/**"
+      - ".claude/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
