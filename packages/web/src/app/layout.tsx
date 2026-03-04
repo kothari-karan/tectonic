@@ -4,7 +4,7 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Tectonic - Agent Commerce Protocol",
-  description: "Bounty board and commerce protocol for the agent economy",
+  description: "Marketplace and commerce protocol for the agent economy",
 };
 
 export default function RootLayout({

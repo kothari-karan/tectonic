@@ -16,11 +16,11 @@ from tests.conftest import create_test_agent
 
 
 class TestScoreCalculation:
-    def test_bounty_completed_weight(self):
-        assert calculate_score_delta("bounty_completed") == 10.0
+    def test_engagement_completed_weight(self):
+        assert calculate_score_delta("engagement_completed") == 10.0
 
-    def test_bounty_posted_weight(self):
-        assert calculate_score_delta("bounty_posted") == 2.0
+    def test_engagement_posted_weight(self):
+        assert calculate_score_delta("engagement_posted") == 2.0
 
     def test_dispute_won_weight(self):
         assert calculate_score_delta("dispute_won") == 5.0
@@ -34,16 +34,16 @@ class TestScoreCalculation:
 
 class TestRecordEvent:
     @pytest.mark.asyncio
-    async def test_record_bounty_completed_event(self, db_session: AsyncSession):
+    async def test_record_engagement_completed_event(self, db_session: AsyncSession):
         agent, _ = await create_test_agent(db_session, name="rep-agent1")
 
         event = await record_event(
             agent_id=agent.id,
-            event_type="bounty_completed",
+            event_type="engagement_completed",
             db=db_session,
         )
 
-        assert event.event_type == ReputationEventType.bounty_completed
+        assert event.event_type == ReputationEventType.engagement_completed
         assert event.score_delta == 10.0
         assert event.agent_id == agent.id
 
@@ -51,12 +51,12 @@ class TestRecordEvent:
         assert agent.reputation_score == 10.0
 
     @pytest.mark.asyncio
-    async def test_record_bounty_posted_event(self, db_session: AsyncSession):
+    async def test_record_engagement_posted_event(self, db_session: AsyncSession):
         agent, _ = await create_test_agent(db_session, name="rep-agent2")
 
         event = await record_event(
             agent_id=agent.id,
-            event_type="bounty_posted",
+            event_type="engagement_posted",
             db=db_session,
         )
 
@@ -85,7 +85,7 @@ class TestRecordEvent:
 
         event = await record_event(
             agent_id=agent.id,
-            event_type="bounty_completed",
+            event_type="engagement_completed",
             contract_id=contract_id,
             db=db_session,
         )
@@ -97,8 +97,8 @@ class TestRecordEvent:
     async def test_multiple_events_accumulate(self, db_session: AsyncSession):
         agent, _ = await create_test_agent(db_session, name="rep-agent5")
 
-        await record_event(agent_id=agent.id, event_type="bounty_completed", db=db_session)
-        await record_event(agent_id=agent.id, event_type="bounty_posted", db=db_session)
+        await record_event(agent_id=agent.id, event_type="engagement_completed", db=db_session)
+        await record_event(agent_id=agent.id, event_type="engagement_posted", db=db_session)
         await record_event(agent_id=agent.id, event_type="dispute_lost", db=db_session)
 
         await db_session.refresh(agent)
@@ -111,8 +111,8 @@ class TestCalculateScore:
     async def test_calculate_score_from_events(self, db_session: AsyncSession):
         agent, _ = await create_test_agent(db_session, name="rep-agent6")
 
-        await record_event(agent_id=agent.id, event_type="bounty_completed", db=db_session)
-        await record_event(agent_id=agent.id, event_type="bounty_posted", db=db_session)
+        await record_event(agent_id=agent.id, event_type="engagement_completed", db=db_session)
+        await record_event(agent_id=agent.id, event_type="engagement_posted", db=db_session)
 
         score = await calculate_score(agent.id, db_session)
         assert score == pytest.approx(12.0)  # 10 + 2
@@ -129,7 +129,7 @@ class TestGetAgentReputation:
     @pytest.mark.asyncio
     async def test_get_reputation_details(self, db_session: AsyncSession):
         agent, _ = await create_test_agent(db_session, name="rep-agent8")
-        await record_event(agent_id=agent.id, event_type="bounty_completed", db=db_session)
+        await record_event(agent_id=agent.id, event_type="engagement_completed", db=db_session)
 
         result = await get_agent_reputation(agent.id, db_session)
 
@@ -137,7 +137,7 @@ class TestGetAgentReputation:
         assert result["reputation_score"] == 10.0
         assert result["total_events"] == 1
         assert len(result["recent_events"]) == 1
-        assert result["recent_events"][0]["event_type"] == "bounty_completed"
+        assert result["recent_events"][0]["event_type"] == "engagement_completed"
 
     @pytest.mark.asyncio
     async def test_get_reputation_nonexistent_agent(self, db_session: AsyncSession):

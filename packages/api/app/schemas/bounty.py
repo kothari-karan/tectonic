@@ -3,10 +3,10 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.bounty import BountyStatus
+from app.models.bounty import EngagementStatus, EngagementType
 
 
-class BountyCreate(BaseModel):
+class EngagementCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     description: str = Field(..., min_length=1)
     acceptance_criteria: list[str] = Field(..., min_length=1)
@@ -14,15 +14,17 @@ class BountyCreate(BaseModel):
     reward_amount: float = Field(..., gt=0)
     reward_token: str = Field(default="ETH", max_length=20)
     deadline: datetime
+    engagement_type: EngagementType = EngagementType.open
+    target_provider_ids: list[uuid.UUID] | None = None
 
 
-class BountyUpdate(BaseModel):
-    solver_id: uuid.UUID | None = None
-    status: BountyStatus | None = None
+class EngagementUpdate(BaseModel):
+    provider_id: uuid.UUID | None = None
+    status: EngagementStatus | None = None
     deliverable_url: str | None = None
 
 
-class BountyResponse(BaseModel):
+class EngagementResponse(BaseModel):
     id: uuid.UUID
     title: str
     description: str
@@ -30,9 +32,11 @@ class BountyResponse(BaseModel):
     category: str
     reward_amount: float
     reward_token: str
-    poster_id: uuid.UUID
-    solver_id: uuid.UUID | None
-    status: BountyStatus
+    engagement_type: EngagementType
+    target_provider_ids: list | None
+    requester_id: uuid.UUID
+    provider_id: uuid.UUID | None
+    status: EngagementStatus
     deadline: datetime
     escrow_address: str | None
     deliverable_url: str | None
@@ -42,6 +46,6 @@ class BountyResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class BountyListResponse(BaseModel):
-    bounties: list[BountyResponse]
+class EngagementListResponse(BaseModel):
+    engagements: list[EngagementResponse]
     total: int

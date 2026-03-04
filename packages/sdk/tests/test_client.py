@@ -10,8 +10,8 @@ from tectonic.client import TectonicClient
 from tectonic.types import (
     AgentCreate,
     AgentType,
-    BountyCreate,
-    BountyStatus,
+    EngagementCreate,
+    EngagementStatus,
     ContractDeliverRequest,
     ContractFundRequest,
     ContractStatus,
@@ -37,28 +37,28 @@ def _agent_json(agent_id: str = "agent-1") -> dict:
     return {
         "id": agent_id,
         "name": "Alice",
-        "agent_type": "poster",
+        "agent_type": "requester",
         "wallet_address": "0x123",
         "capabilities": ["dev"],
         "reputation_score": 4.5,
-        "bounties_posted": 10,
-        "bounties_completed": 5,
+        "engagements_posted": 10,
+        "engagements_completed": 5,
         "created_at": NOW,
         "updated_at": NOW,
     }
 
 
-def _bounty_json(bounty_id: str = "bounty-1") -> dict:
+def _engagement_json(engagement_id: str = "engagement-1") -> dict:
     return {
-        "id": bounty_id,
+        "id": engagement_id,
         "title": "Build CLI",
         "description": "A CLI tool",
         "acceptance_criteria": ["Works"],
         "category": "development",
         "reward_amount": 0.05,
         "reward_token": "ETH",
-        "poster_id": "agent-1",
-        "solver_id": None,
+        "requester_id": "agent-1",
+        "provider_id": None,
         "status": "open",
         "deadline": NOW,
         "escrow_address": None,
@@ -71,8 +71,8 @@ def _bounty_json(bounty_id: str = "bounty-1") -> dict:
 def _proposal_json(proposal_id: str = "proposal-1") -> dict:
     return {
         "id": proposal_id,
-        "bounty_id": "bounty-1",
-        "solver_id": "agent-2",
+        "engagement_id": "engagement-1",
+        "provider_id": "agent-2",
         "status": "pending",
         "proposed_price": 0.04,
         "proposed_deadline": NOW,
@@ -84,10 +84,10 @@ def _proposal_json(proposal_id: str = "proposal-1") -> dict:
 def _negotiation_json(negotiation_id: str = "neg-1") -> dict:
     return {
         "id": negotiation_id,
-        "bounty_id": "bounty-1",
+        "engagement_id": "engagement-1",
         "proposal_id": "proposal-1",
-        "poster_id": "agent-1",
-        "solver_id": "agent-2",
+        "requester_id": "agent-1",
+        "provider_id": "agent-2",
         "status": "active",
         "current_terms": None,
         "turn_count": 0,
@@ -114,10 +114,10 @@ def _turn_json(turn_id: str = "turn-1") -> dict:
 def _contract_json(contract_id: str = "contract-1") -> dict:
     return {
         "id": contract_id,
-        "bounty_id": "bounty-1",
+        "engagement_id": "engagement-1",
         "negotiation_id": "neg-1",
-        "poster_id": "agent-1",
-        "solver_id": "agent-2",
+        "requester_id": "agent-1",
+        "provider_id": "agent-2",
         "status": "pending_funding",
         "agreed_terms": {"price": 0.05},
         "terms_hash": "0xhash123",
@@ -134,9 +134,9 @@ def _reputation_json(agent_id: str = "agent-1") -> dict:
     return {
         "agent_id": agent_id,
         "reputation_score": 4.5,
-        "bounties_posted": 10,
-        "bounties_completed": 8,
-        "events": [{"event_type": "bounty_completed", "score_delta": 0.5}],
+        "engagements_posted": 10,
+        "engagements_completed": 8,
+        "events": [{"event_type": "engagement_completed", "score_delta": 0.5}],
     }
 
 
@@ -195,7 +195,7 @@ class TestAgentEndpoints:
             result = await client.register_agent(
                 AgentCreate(
                     name="Alice",
-                    agent_type=AgentType.poster,
+                    agent_type=AgentType.requester,
                     wallet_address="0x123",
                     capabilities=["dev"],
                 )
@@ -209,7 +209,7 @@ class TestAgentEndpoints:
 
         body = json.loads(request_body)
         assert body["name"] == "Alice"
-        assert body["agent_type"] == "poster"
+        assert body["agent_type"] == "requester"
 
     @respx.mock
     async def test_get_agent(self):
@@ -220,7 +220,7 @@ class TestAgentEndpoints:
             agent = await client.get_agent("agent-1")
         assert agent.id == "agent-1"
         assert agent.name == "Alice"
-        assert agent.agent_type == AgentType.poster
+        assert agent.agent_type == AgentType.requester
 
     @respx.mock
     async def test_get_agent_reputation(self):
@@ -230,24 +230,24 @@ class TestAgentEndpoints:
         async with TectonicClient(BASE_URL) as client:
             rep = await client.get_agent_reputation("agent-1")
         assert rep.reputation_score == 4.5
-        assert rep.bounties_completed == 8
+        assert rep.engagements_completed == 8
         assert len(rep.events) == 1
 
 
 # ---------------------------------------------------------------------------
-# Bounty endpoint tests
+# Engagement endpoint tests
 # ---------------------------------------------------------------------------
 
 
-class TestBountyEndpoints:
+class TestEngagementEndpoints:
     @respx.mock
-    async def test_create_bounty(self):
-        route = respx.post(f"{BASE_URL}/bounties").mock(
-            return_value=httpx.Response(200, json=_bounty_json())
+    async def test_create_engagement(self):
+        route = respx.post(f"{BASE_URL}/engagements").mock(
+            return_value=httpx.Response(200, json=_engagement_json())
         )
         async with TectonicClient(BASE_URL, api_key="tec_key") as client:
-            bounty = await client.create_bounty(
-                BountyCreate(
+            engagement = await client.create_engagement(
+                EngagementCreate(
                     title="Build CLI",
                     description="A CLI tool",
                     acceptance_criteria=["Works"],
@@ -256,59 +256,59 @@ class TestBountyEndpoints:
                     deadline=datetime.now(timezone.utc),
                 )
             )
-        assert bounty.id == "bounty-1"
-        assert bounty.status == BountyStatus.open
+        assert engagement.id == "engagement-1"
+        assert engagement.status == EngagementStatus.open
         assert route.called
 
     @respx.mock
-    async def test_list_bounties_no_filter(self):
-        resp_json = {"bounties": [_bounty_json()], "total": 1}
-        route = respx.get(f"{BASE_URL}/bounties").mock(
+    async def test_list_engagements_no_filter(self):
+        resp_json = {"engagements": [_engagement_json()], "total": 1}
+        route = respx.get(f"{BASE_URL}/engagements").mock(
             return_value=httpx.Response(200, json=resp_json)
         )
         async with TectonicClient(BASE_URL) as client:
-            result = await client.list_bounties()
+            result = await client.list_engagements()
         assert result.total == 1
-        assert len(result.bounties) == 1
+        assert len(result.engagements) == 1
         assert route.called
 
     @respx.mock
-    async def test_list_bounties_with_filters(self):
-        resp_json = {"bounties": [], "total": 0}
-        route = respx.get(f"{BASE_URL}/bounties").mock(
+    async def test_list_engagements_with_filters(self):
+        resp_json = {"engagements": [], "total": 0}
+        route = respx.get(f"{BASE_URL}/engagements").mock(
             return_value=httpx.Response(200, json=resp_json)
         )
         async with TectonicClient(BASE_URL) as client:
-            result = await client.list_bounties(status="open", category="dev")
+            result = await client.list_engagements(status="open", category="dev")
         assert result.total == 0
         request = route.calls[0].request
         assert "status=open" in str(request.url)
         assert "category=dev" in str(request.url)
 
     @respx.mock
-    async def test_get_bounty(self):
-        respx.get(f"{BASE_URL}/bounties/bounty-1").mock(
-            return_value=httpx.Response(200, json=_bounty_json())
+    async def test_get_engagement(self):
+        respx.get(f"{BASE_URL}/engagements/engagement-1").mock(
+            return_value=httpx.Response(200, json=_engagement_json())
         )
         async with TectonicClient(BASE_URL) as client:
-            bounty = await client.get_bounty("bounty-1")
-        assert bounty.title == "Build CLI"
+            engagement = await client.get_engagement("engagement-1")
+        assert engagement.title == "Build CLI"
 
     @respx.mock
-    async def test_update_bounty(self):
-        from tectonic.types import BountyUpdate
+    async def test_update_engagement(self):
+        from tectonic.types import EngagementUpdate
 
-        updated_json = _bounty_json()
+        updated_json = _engagement_json()
         updated_json["status"] = "in_progress"
-        route = respx.patch(f"{BASE_URL}/bounties/bounty-1").mock(
+        route = respx.patch(f"{BASE_URL}/engagements/engagement-1").mock(
             return_value=httpx.Response(200, json=updated_json)
         )
         async with TectonicClient(BASE_URL, api_key="tec_key") as client:
-            bounty = await client.update_bounty(
-                "bounty-1",
-                BountyUpdate(status=BountyStatus.in_progress),
+            engagement = await client.update_engagement(
+                "engagement-1",
+                EngagementUpdate(status=EngagementStatus.in_progress),
             )
-        assert bounty.status == BountyStatus.in_progress
+        assert engagement.status == EngagementStatus.in_progress
         assert route.called
 
 
@@ -320,12 +320,12 @@ class TestBountyEndpoints:
 class TestProposalEndpoints:
     @respx.mock
     async def test_create_proposal(self):
-        route = respx.post(f"{BASE_URL}/bounties/bounty-1/proposals").mock(
+        route = respx.post(f"{BASE_URL}/engagements/engagement-1/proposals").mock(
             return_value=httpx.Response(200, json=_proposal_json())
         )
         async with TectonicClient(BASE_URL, api_key="tec_key") as client:
             proposal = await client.create_proposal(
-                "bounty-1",
+                "engagement-1",
                 ProposalCreate(
                     proposed_price=0.04,
                     proposed_deadline=datetime.now(timezone.utc),
@@ -339,24 +339,24 @@ class TestProposalEndpoints:
     @respx.mock
     async def test_list_proposals_bare_list(self):
         """API returns a bare JSON array."""
-        respx.get(f"{BASE_URL}/bounties/bounty-1/proposals").mock(
+        respx.get(f"{BASE_URL}/engagements/engagement-1/proposals").mock(
             return_value=httpx.Response(200, json=[_proposal_json()])
         )
         async with TectonicClient(BASE_URL) as client:
-            proposals = await client.list_proposals("bounty-1")
+            proposals = await client.list_proposals("engagement-1")
         assert len(proposals) == 1
-        assert proposals[0].solver_id == "agent-2"
+        assert proposals[0].provider_id == "agent-2"
 
     @respx.mock
     async def test_list_proposals_wrapped(self):
         """API returns proposals wrapped in an object."""
-        respx.get(f"{BASE_URL}/bounties/bounty-1/proposals").mock(
+        respx.get(f"{BASE_URL}/engagements/engagement-1/proposals").mock(
             return_value=httpx.Response(
                 200, json={"proposals": [_proposal_json()]}
             )
         )
         async with TectonicClient(BASE_URL) as client:
-            proposals = await client.list_proposals("bounty-1")
+            proposals = await client.list_proposals("engagement-1")
         assert len(proposals) == 1
 
 
@@ -372,13 +372,13 @@ class TestNegotiationEndpoints:
             return_value=httpx.Response(200, json=_negotiation_json())
         )
         async with TectonicClient(BASE_URL, api_key="tec_key") as client:
-            neg = await client.create_negotiation("bounty-1", "proposal-1")
+            neg = await client.create_negotiation("engagement-1", "proposal-1")
         assert neg.id == "neg-1"
         assert neg.status == NegotiationStatus.active
         import json
 
         body = json.loads(route.calls[0].request.content)
-        assert body["bounty_id"] == "bounty-1"
+        assert body["engagement_id"] == "engagement-1"
         assert body["proposal_id"] == "proposal-1"
 
     @respx.mock
@@ -388,8 +388,8 @@ class TestNegotiationEndpoints:
         )
         async with TectonicClient(BASE_URL) as client:
             neg = await client.get_negotiation("neg-1")
-        assert neg.poster_id == "agent-1"
-        assert neg.solver_id == "agent-2"
+        assert neg.requester_id == "agent-1"
+        assert neg.provider_id == "agent-2"
 
     @respx.mock
     async def test_submit_turn_counter(self):
@@ -467,13 +467,13 @@ class TestContractEndpoints:
             return_value=httpx.Response(200, json=_contract_json())
         )
         async with TectonicClient(BASE_URL, api_key="tec_key") as client:
-            contract = await client.create_contract("bounty-1", "neg-1")
+            contract = await client.create_contract("engagement-1", "neg-1")
         assert contract.id == "contract-1"
         assert contract.status == ContractStatus.pending_funding
         import json
 
         body = json.loads(route.calls[0].request.content)
-        assert body["bounty_id"] == "bounty-1"
+        assert body["engagement_id"] == "engagement-1"
         assert body["negotiation_id"] == "neg-1"
 
     @respx.mock
@@ -582,13 +582,13 @@ class TestErrorHandling:
 
     @respx.mock
     async def test_422_validation_error(self):
-        respx.post(f"{BASE_URL}/bounties").mock(
+        respx.post(f"{BASE_URL}/engagements").mock(
             return_value=httpx.Response(422, json={"detail": "Validation error"})
         )
         async with TectonicClient(BASE_URL, api_key="tec_key") as client:
             with pytest.raises(httpx.HTTPStatusError) as exc_info:
-                await client.create_bounty(
-                    BountyCreate(
+                await client.create_engagement(
+                    EngagementCreate(
                         title="",
                         description="",
                         acceptance_criteria=[],
@@ -601,12 +601,12 @@ class TestErrorHandling:
 
     @respx.mock
     async def test_500_server_error(self):
-        respx.get(f"{BASE_URL}/bounties").mock(
+        respx.get(f"{BASE_URL}/engagements").mock(
             return_value=httpx.Response(500, json={"detail": "Internal server error"})
         )
         async with TectonicClient(BASE_URL) as client:
             with pytest.raises(httpx.HTTPStatusError) as exc_info:
-                await client.list_bounties()
+                await client.list_engagements()
             assert exc_info.value.response.status_code == 500
 
 
@@ -625,28 +625,28 @@ class TestRequestDetails:
         )
         async with TectonicClient(BASE_URL) as client:
             await client.register_agent(
-                AgentCreate(name="Alice", agent_type=AgentType.poster)
+                AgentCreate(name="Alice", agent_type=AgentType.requester)
             )
         assert route.calls[0].request.method == "POST"
 
     @respx.mock
-    async def test_get_bounty_uses_get(self):
-        route = respx.get(f"{BASE_URL}/bounties/b-1").mock(
-            return_value=httpx.Response(200, json=_bounty_json())
+    async def test_get_engagement_uses_get(self):
+        route = respx.get(f"{BASE_URL}/engagements/e-1").mock(
+            return_value=httpx.Response(200, json=_engagement_json())
         )
         async with TectonicClient(BASE_URL) as client:
-            await client.get_bounty("b-1")
+            await client.get_engagement("e-1")
         assert route.calls[0].request.method == "GET"
 
     @respx.mock
-    async def test_update_bounty_uses_patch(self):
-        from tectonic.types import BountyUpdate
+    async def test_update_engagement_uses_patch(self):
+        from tectonic.types import EngagementUpdate
 
-        route = respx.patch(f"{BASE_URL}/bounties/b-1").mock(
-            return_value=httpx.Response(200, json=_bounty_json())
+        route = respx.patch(f"{BASE_URL}/engagements/e-1").mock(
+            return_value=httpx.Response(200, json=_engagement_json())
         )
         async with TectonicClient(BASE_URL) as client:
-            await client.update_bounty("b-1", BountyUpdate())
+            await client.update_engagement("e-1", EngagementUpdate())
         assert route.calls[0].request.method == "PATCH"
 
     @respx.mock
@@ -669,3 +669,42 @@ class TestRequestDetails:
             assert client.base_url == BASE_URL
             agent = await client.get_agent("a-1")
             assert agent.id == "agent-1"
+
+
+class TestInbox:
+    @respx.mock
+    async def test_get_inbox(self):
+        inbox_data = {
+            "engagements": [_engagement_json()],
+            "total": 1,
+        }
+        route = respx.get(f"{BASE_URL}/agents/agent-1/inbox").mock(
+            return_value=httpx.Response(200, json=inbox_data)
+        )
+        async with TectonicClient(BASE_URL) as client:
+            result = await client.get_inbox("agent-1")
+        assert result.total == 1
+        assert len(result.engagements) == 1
+        assert result.engagements[0].id == "engagement-1"
+
+    @respx.mock
+    async def test_get_inbox_with_status_filter(self):
+        inbox_data = {"engagements": [], "total": 0}
+        route = respx.get(f"{BASE_URL}/agents/agent-1/inbox").mock(
+            return_value=httpx.Response(200, json=inbox_data)
+        )
+        async with TectonicClient(BASE_URL) as client:
+            result = await client.get_inbox("agent-1", status="open")
+        assert result.total == 0
+        assert "status" in str(route.calls[0].request.url)
+
+    @respx.mock
+    async def test_get_inbox_empty(self):
+        inbox_data = {"engagements": [], "total": 0}
+        respx.get(f"{BASE_URL}/agents/agent-1/inbox").mock(
+            return_value=httpx.Response(200, json=inbox_data)
+        )
+        async with TectonicClient(BASE_URL) as client:
+            result = await client.get_inbox("agent-1")
+        assert result.total == 0
+        assert result.engagements == []

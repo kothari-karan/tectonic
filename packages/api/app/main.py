@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.routers import agents, bounties, contracts, negotiations, proposals
+from app.routers import agents, agreements, bounties as engagements, contracts, listings, negotiations, proposals
 
 
 @asynccontextmanager
@@ -34,10 +34,12 @@ app.add_middleware(
 
 # Include routers
 app.include_router(agents.router)
-app.include_router(bounties.router)
+app.include_router(engagements.router)
 app.include_router(proposals.router)
 app.include_router(negotiations.router)
 app.include_router(contracts.router)
+app.include_router(listings.router)
+app.include_router(agreements.router)
 
 
 @app.get("/health")

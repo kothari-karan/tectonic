@@ -29,16 +29,16 @@ class Negotiation(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True, default=uuid.uuid4
     )
-    bounty_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("bounties.id"), nullable=False
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("engagements.id"), nullable=False
     )
     proposal_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("proposals.id"), nullable=False
     )
-    poster_id: Mapped[uuid.UUID] = mapped_column(
+    requester_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("agents.id"), nullable=False
     )
-    solver_id: Mapped[uuid.UUID] = mapped_column(
+    provider_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("agents.id"), nullable=False
     )
     status: Mapped[NegotiationStatus] = mapped_column(
@@ -58,7 +58,7 @@ class Negotiation(Base):
     )
 
     # Relationships
-    bounty = relationship("Bounty", back_populates="negotiations")
+    engagement = relationship("Engagement", back_populates="negotiations")
     proposal = relationship("Proposal", back_populates="negotiations")
     turns = relationship(
         "NegotiationTurn", back_populates="negotiation", order_by="NegotiationTurn.sequence"

@@ -9,7 +9,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
-class BountyStatus(str, enum.Enum):
+class EngagementType(str, enum.Enum):
+    open = "open"
+    direct = "direct"
+    invited = "invited"
+
+
+class EngagementStatus(str, enum.Enum):
     open = "open"
     proposed = "proposed"
     negotiating = "negotiating"
@@ -22,8 +28,8 @@ class BountyStatus(str, enum.Enum):
     disputed = "disputed"
 
 
-class Bounty(Base):
-    __tablename__ = "bounties"
+class Engagement(Base):
+    __tablename__ = "engagements"
 
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True, default=uuid.uuid4
@@ -34,14 +40,18 @@ class Bounty(Base):
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     reward_amount: Mapped[float] = mapped_column(Float, nullable=False)
     reward_token: Mapped[str] = mapped_column(String(20), default="ETH")
-    poster_id: Mapped[uuid.UUID] = mapped_column(
+    engagement_type: Mapped[EngagementType] = mapped_column(
+        Enum(EngagementType, native_enum=False, length=20), default=EngagementType.open
+    )
+    target_provider_ids: Mapped[list | None] = mapped_column(PG_JSON, nullable=True)
+    requester_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("agents.id"), nullable=False
     )
-    solver_id: Mapped[uuid.UUID | None] = mapped_column(
+    provider_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("agents.id"), nullable=True
     )
-    status: Mapped[BountyStatus] = mapped_column(
-        Enum(BountyStatus, native_enum=False, length=20), default=BountyStatus.open
+    status: Mapped[EngagementStatus] = mapped_column(
+        Enum(EngagementStatus, native_enum=False, length=20), default=EngagementStatus.open
     )
     deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     escrow_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -56,11 +66,11 @@ class Bounty(Base):
     )
 
     # Relationships
-    poster = relationship(
-        "Agent", foreign_keys=[poster_id], back_populates="posted_bounties"
+    requester = relationship(
+        "Agent", foreign_keys=[requester_id], back_populates="posted_engagements"
     )
-    solver = relationship(
-        "Agent", foreign_keys=[solver_id], back_populates="solved_bounties"
+    provider = relationship(
+        "Agent", foreign_keys=[provider_id], back_populates="completed_engagements"
     )
-    proposals = relationship("Proposal", back_populates="bounty")
-    negotiations = relationship("Negotiation", back_populates="bounty")
+    proposals = relationship("Proposal", back_populates="engagement")
+    negotiations = relationship("Negotiation", back_populates="engagement")

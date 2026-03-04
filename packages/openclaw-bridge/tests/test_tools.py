@@ -14,9 +14,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tectonic.types import (
-    Bounty,
-    BountyListResponse,
-    BountyStatus,
+    Engagement,
+    EngagementListResponse,
+    EngagementStatus,
     Contract,
     ContractStatus,
     Negotiation,
@@ -37,7 +37,7 @@ NOW = datetime.now(timezone.utc)
 # ---------------------------------------------------------------------------
 
 
-def _make_bounty(**overrides) -> Bounty:
+def _make_engagement(**overrides) -> Engagement:
     defaults = dict(
         id="b-1",
         title="Build CLI",
@@ -46,9 +46,9 @@ def _make_bounty(**overrides) -> Bounty:
         category="development",
         reward_amount=0.05,
         reward_token="ETH",
-        poster_id="p-1",
-        solver_id=None,
-        status=BountyStatus.open,
+        requester_id="p-1",
+        provider_id=None,
+        status=EngagementStatus.open,
         deadline=NOW,
         escrow_address=None,
         deliverable_url=None,
@@ -56,14 +56,14 @@ def _make_bounty(**overrides) -> Bounty:
         updated_at=NOW,
     )
     defaults.update(overrides)
-    return Bounty(**defaults)
+    return Engagement(**defaults)
 
 
 def _make_proposal(**overrides) -> Proposal:
     defaults = dict(
         id="pr-1",
-        bounty_id="b-1",
-        solver_id="s-1",
+        engagement_id="b-1",
+        provider_id="s-1",
         status=ProposalStatus.pending,
         proposed_price=0.04,
         proposed_deadline=NOW,
@@ -77,10 +77,10 @@ def _make_proposal(**overrides) -> Proposal:
 def _make_negotiation(**overrides) -> Negotiation:
     defaults = dict(
         id="n-1",
-        bounty_id="b-1",
+        engagement_id="b-1",
         proposal_id="pr-1",
-        poster_id="p-1",
-        solver_id="s-1",
+        requester_id="p-1",
+        provider_id="s-1",
         status=NegotiationStatus.active,
         current_terms=None,
         turn_count=0,
@@ -111,10 +111,10 @@ def _make_turn(**overrides) -> NegotiationTurn:
 def _make_contract(**overrides) -> Contract:
     defaults = dict(
         id="c-1",
-        bounty_id="b-1",
+        engagement_id="b-1",
         negotiation_id="n-1",
-        poster_id="p-1",
-        solver_id="s-1",
+        requester_id="p-1",
+        provider_id="s-1",
         status=ContractStatus.pending_funding,
         agreed_terms={"price": 0.05},
         terms_hash="0xhash",
@@ -133,9 +133,9 @@ def _make_reputation(**overrides) -> ReputationSummary:
     defaults = dict(
         agent_id="p-1",
         reputation_score=4.5,
-        bounties_posted=10,
-        bounties_completed=8,
-        events=[{"event_type": "bounty_completed", "score_delta": 0.5}],
+        engagements_posted=10,
+        engagements_completed=8,
+        events=[{"event_type": "engagement_completed", "score_delta": 0.5}],
     )
     defaults.update(overrides)
     return ReputationSummary(**defaults)
@@ -150,18 +150,18 @@ def _mock_client():
 
 
 # ---------------------------------------------------------------------------
-# tectonic_post_bounty
+# tectonic_post_engagement
 # ---------------------------------------------------------------------------
 
 
-class TestPostBounty:
+class TestPostEngagement:
     @patch.object(tools, "_client")
     async def test_success(self, mock_client_fn):
         client = _mock_client()
-        client.create_bounty = AsyncMock(return_value=_make_bounty())
+        client.create_engagement = AsyncMock(return_value=_make_engagement())
         mock_client_fn.return_value = client
 
-        result = await tools.tectonic_post_bounty(
+        result = await tools.tectonic_post_engagement(
             title="Build CLI",
             description="A CLI tool",
             criteria=["Tests pass"],
@@ -170,18 +170,18 @@ class TestPostBounty:
             deadline="2025-12-31T00:00:00Z",
         )
 
-        assert result["bounty_id"] == "b-1"
+        assert result["engagement_id"] == "b-1"
         assert result["status"] == "open"
         assert result["reward_amount"] == 0.05
-        client.create_bounty.assert_called_once()
+        client.create_engagement.assert_called_once()
 
     @patch.object(tools, "_client")
     async def test_error_handling(self, mock_client_fn):
         client = _mock_client()
-        client.create_bounty = AsyncMock(side_effect=Exception("Connection refused"))
+        client.create_engagement = AsyncMock(side_effect=Exception("Connection refused"))
         mock_client_fn.return_value = client
 
-        result = await tools.tectonic_post_bounty(
+        result = await tools.tectonic_post_engagement(
             title="Test",
             description="Test",
             criteria=["Test"],
@@ -383,12 +383,12 @@ class TestReviewDelivery:
     @patch.object(tools, "_client")
     async def test_success(self, mock_client_fn):
         client = _mock_client()
-        delivered_bounty = _make_bounty(
-            status=BountyStatus.delivered,
+        delivered_engagement = _make_engagement(
+            status=EngagementStatus.delivered,
             deliverable_url="https://github.com/test/repo",
         )
-        client.list_bounties = AsyncMock(
-            return_value=BountyListResponse(bounties=[delivered_bounty], total=1)
+        client.list_engagements = AsyncMock(
+            return_value=EngagementListResponse(engagements=[delivered_engagement], total=1)
         )
         mock_client_fn.return_value = client
 
@@ -399,8 +399,8 @@ class TestReviewDelivery:
     @patch.object(tools, "_client")
     async def test_no_delivery(self, mock_client_fn):
         client = _mock_client()
-        client.list_bounties = AsyncMock(
-            return_value=BountyListResponse(bounties=[], total=0)
+        client.list_engagements = AsyncMock(
+            return_value=EngagementListResponse(engagements=[], total=0)
         )
         mock_client_fn.return_value = client
 
@@ -442,36 +442,36 @@ class TestVerifyDelivery:
 
 
 # ---------------------------------------------------------------------------
-# tectonic_my_bounties
+# tectonic_my_engagements
 # ---------------------------------------------------------------------------
 
 
-class TestMyBounties:
+class TestMyEngagements:
     @patch.object(tools, "_client")
     async def test_success(self, mock_client_fn):
         client = _mock_client()
-        client.list_bounties = AsyncMock(
-            return_value=BountyListResponse(
-                bounties=[_make_bounty(), _make_bounty(id="b-2", title="Design logo")],
+        client.list_engagements = AsyncMock(
+            return_value=EngagementListResponse(
+                engagements=[_make_engagement(), _make_engagement(id="b-2", title="Design logo")],
                 total=2,
             )
         )
         mock_client_fn.return_value = client
 
-        result = await tools.tectonic_my_bounties()
+        result = await tools.tectonic_my_engagements()
 
         assert result["total"] == 2
-        assert len(result["bounties"]) == 2
+        assert len(result["engagements"]) == 2
 
     @patch.object(tools, "_client")
     async def test_empty(self, mock_client_fn):
         client = _mock_client()
-        client.list_bounties = AsyncMock(
-            return_value=BountyListResponse(bounties=[], total=0)
+        client.list_engagements = AsyncMock(
+            return_value=EngagementListResponse(engagements=[], total=0)
         )
         mock_client_fn.return_value = client
 
-        result = await tools.tectonic_my_bounties()
+        result = await tools.tectonic_my_engagements()
 
         assert result["total"] == 0
 
@@ -498,7 +498,7 @@ class TestMyReputation:
         result = await tools.tectonic_my_reputation()
 
         assert result["reputation_score"] == 4.5
-        assert result["bounties_completed"] == 8
+        assert result["engagements_completed"] == 8
 
     @patch.object(tools, "get_config")
     async def test_missing_agent_id(self, mock_config):
@@ -513,64 +513,64 @@ class TestMyReputation:
 
 
 # ---------------------------------------------------------------------------
-# tectonic_browse_bounties
+# tectonic_browse_engagements
 # ---------------------------------------------------------------------------
 
 
-class TestBrowseBounties:
+class TestBrowseEngagements:
     @patch.object(tools, "_client")
     async def test_no_filters(self, mock_client_fn):
         client = _mock_client()
-        client.list_bounties = AsyncMock(
-            return_value=BountyListResponse(bounties=[_make_bounty()], total=1)
+        client.list_engagements = AsyncMock(
+            return_value=EngagementListResponse(engagements=[_make_engagement()], total=1)
         )
         mock_client_fn.return_value = client
 
-        result = await tools.tectonic_browse_bounties()
+        result = await tools.tectonic_browse_engagements()
 
         assert result["total"] == 1
-        client.list_bounties.assert_called_once_with(status="open", category=None)
+        client.list_engagements.assert_called_once_with(status="open", category=None)
 
     @patch.object(tools, "_client")
     async def test_category_filter(self, mock_client_fn):
         client = _mock_client()
-        client.list_bounties = AsyncMock(
-            return_value=BountyListResponse(bounties=[_make_bounty()], total=1)
+        client.list_engagements = AsyncMock(
+            return_value=EngagementListResponse(engagements=[_make_engagement()], total=1)
         )
         mock_client_fn.return_value = client
 
-        result = await tools.tectonic_browse_bounties(category="development")
+        result = await tools.tectonic_browse_engagements(category="development")
 
-        client.list_bounties.assert_called_once_with(status="open", category="development")
+        client.list_engagements.assert_called_once_with(status="open", category="development")
 
     @patch.object(tools, "_client")
     async def test_min_reward_filter(self, mock_client_fn):
         client = _mock_client()
-        cheap = _make_bounty(id="b-cheap", reward_amount=0.01)
-        expensive = _make_bounty(id="b-exp", reward_amount=0.10)
-        client.list_bounties = AsyncMock(
-            return_value=BountyListResponse(bounties=[cheap, expensive], total=2)
+        cheap = _make_engagement(id="b-cheap", reward_amount=0.01)
+        expensive = _make_engagement(id="b-exp", reward_amount=0.10)
+        client.list_engagements = AsyncMock(
+            return_value=EngagementListResponse(engagements=[cheap, expensive], total=2)
         )
         mock_client_fn.return_value = client
 
-        result = await tools.tectonic_browse_bounties(min_reward=0.05)
+        result = await tools.tectonic_browse_engagements(min_reward=0.05)
 
         assert result["total"] == 1
-        assert result["bounties"][0]["bounty_id"] == "b-exp"
+        assert result["engagements"][0]["engagement_id"] == "b-exp"
 
     @patch.object(tools, "_client")
     async def test_description_truncated(self, mock_client_fn):
         client = _mock_client()
         long_desc = "A" * 500
-        bounty = _make_bounty(description=long_desc)
-        client.list_bounties = AsyncMock(
-            return_value=BountyListResponse(bounties=[bounty], total=1)
+        engagement = _make_engagement(description=long_desc)
+        client.list_engagements = AsyncMock(
+            return_value=EngagementListResponse(engagements=[engagement], total=1)
         )
         mock_client_fn.return_value = client
 
-        result = await tools.tectonic_browse_bounties()
+        result = await tools.tectonic_browse_engagements()
 
-        assert len(result["bounties"][0]["description"]) == 200
+        assert len(result["engagements"][0]["description"]) == 200
 
 
 # ---------------------------------------------------------------------------
@@ -586,7 +586,7 @@ class TestSubmitProposal:
         mock_client_fn.return_value = client
 
         result = await tools.tectonic_submit_proposal(
-            bounty_id="b-1",
+            engagement_id="b-1",
             price=0.04,
             deadline="2025-12-31T00:00:00Z",
             approach="Will use Python",
@@ -599,11 +599,11 @@ class TestSubmitProposal:
     @patch.object(tools, "_client")
     async def test_error(self, mock_client_fn):
         client = _mock_client()
-        client.create_proposal = AsyncMock(side_effect=Exception("Bounty not found"))
+        client.create_proposal = AsyncMock(side_effect=Exception("Engagement not found"))
         mock_client_fn.return_value = client
 
         result = await tools.tectonic_submit_proposal(
-            bounty_id="bad-id",
+            engagement_id="bad-id",
             price=0.04,
             deadline="2025-12-31T00:00:00Z",
             approach="Will use Python",

@@ -9,8 +9,8 @@ from app.database import Base
 
 
 class ReputationEventType(str, enum.Enum):
-    bounty_completed = "bounty_completed"
-    bounty_posted = "bounty_posted"
+    engagement_completed = "engagement_completed"
+    engagement_posted = "engagement_posted"
     dispute_won = "dispute_won"
     dispute_lost = "dispute_lost"
 

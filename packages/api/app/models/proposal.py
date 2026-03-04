@@ -21,10 +21,10 @@ class Proposal(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True, default=uuid.uuid4
     )
-    bounty_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("bounties.id"), nullable=False
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("engagements.id"), nullable=False
     )
-    solver_id: Mapped[uuid.UUID] = mapped_column(
+    provider_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("agents.id"), nullable=False
     )
     status: Mapped[ProposalStatus] = mapped_column(
@@ -40,8 +40,8 @@ class Proposal(Base):
     )
 
     # Relationships
-    bounty = relationship("Bounty", back_populates="proposals")
-    solver = relationship("Agent", back_populates="proposals")
+    engagement = relationship("Engagement", back_populates="proposals")
+    provider = relationship("Agent", back_populates="proposals")
     negotiations = relationship("Negotiation", back_populates="proposal")
 
     __table_args__ = ()

@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
-  usePathname: vi.fn(() => '/poster'),
+  usePathname: vi.fn(() => '/requester'),
 }));
 
 // Mock next/link
@@ -36,31 +36,31 @@ describe('Header', () => {
 
   it('renders all persona navigation links', () => {
     render(<Header />);
-    expect(screen.getByTestId('persona-poster')).toBeInTheDocument();
-    expect(screen.getByTestId('persona-solver')).toBeInTheDocument();
+    expect(screen.getByTestId('persona-requester')).toBeInTheDocument();
+    expect(screen.getByTestId('persona-provider')).toBeInTheDocument();
     expect(screen.getByTestId('persona-admin')).toBeInTheDocument();
   });
 
-  it('renders Poster, Solver, Admin text', () => {
+  it('renders Requester, Provider, Admin text', () => {
     render(<Header />);
-    expect(screen.getByText('Poster')).toBeInTheDocument();
-    expect(screen.getByText('Solver')).toBeInTheDocument();
+    expect(screen.getByText('Requester')).toBeInTheDocument();
+    expect(screen.getByText('Provider')).toBeInTheDocument();
     expect(screen.getByText('Admin')).toBeInTheDocument();
   });
 
-  it('highlights Poster when on /poster path', () => {
-    (usePathname as ReturnType<typeof vi.fn>).mockReturnValue('/poster');
+  it('highlights Requester when on /requester path', () => {
+    (usePathname as ReturnType<typeof vi.fn>).mockReturnValue('/requester');
     render(<Header />);
-    const posterLink = screen.getByTestId('persona-poster');
-    expect(posterLink.className).toContain('text-accent');
-    expect(posterLink.className).toContain('bg-accent/20');
+    const requesterLink = screen.getByTestId('persona-requester');
+    expect(requesterLink.className).toContain('text-accent');
+    expect(requesterLink.className).toContain('bg-accent/20');
   });
 
-  it('highlights Solver when on /solver path', () => {
-    (usePathname as ReturnType<typeof vi.fn>).mockReturnValue('/solver');
+  it('highlights Provider when on /provider path', () => {
+    (usePathname as ReturnType<typeof vi.fn>).mockReturnValue('/provider');
     render(<Header />);
-    const solverLink = screen.getByTestId('persona-solver');
-    expect(solverLink.className).toContain('text-accent');
+    const providerLink = screen.getByTestId('persona-provider');
+    expect(providerLink.className).toContain('text-accent');
   });
 
   it('highlights Admin when on /admin path', () => {
@@ -71,22 +71,22 @@ describe('Header', () => {
   });
 
   it('does not highlight non-active personas', () => {
-    (usePathname as ReturnType<typeof vi.fn>).mockReturnValue('/poster');
+    (usePathname as ReturnType<typeof vi.fn>).mockReturnValue('/requester');
     render(<Header />);
-    const solverLink = screen.getByTestId('persona-solver');
-    expect(solverLink.className).toContain('text-white/60');
-    expect(solverLink.className).not.toContain('bg-accent/20');
+    const providerLink = screen.getByTestId('persona-provider');
+    expect(providerLink.className).toContain('text-white/60');
+    expect(providerLink.className).not.toContain('bg-accent/20');
   });
 
   it('links to correct paths', () => {
     render(<Header />);
-    expect(screen.getByTestId('persona-poster')).toHaveAttribute(
+    expect(screen.getByTestId('persona-requester')).toHaveAttribute(
       'href',
-      '/poster'
+      '/requester'
     );
-    expect(screen.getByTestId('persona-solver')).toHaveAttribute(
+    expect(screen.getByTestId('persona-provider')).toHaveAttribute(
       'href',
-      '/solver'
+      '/provider'
     );
     expect(screen.getByTestId('persona-admin')).toHaveAttribute(
       'href',

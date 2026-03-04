@@ -9,8 +9,8 @@ from app.models.reputation import ReputationEvent, ReputationEventType
 
 # Reputation score weights
 SCORE_WEIGHTS: dict[str, float] = {
-    "bounty_completed": 10.0,
-    "bounty_posted": 2.0,
+    "engagement_completed": 10.0,
+    "engagement_posted": 2.0,
     "dispute_won": 5.0,
     "dispute_lost": -10.0,
 }
@@ -81,8 +81,8 @@ async def get_agent_reputation(
     return {
         "agent_id": str(agent_id),
         "reputation_score": agent.reputation_score,
-        "bounties_posted": agent.bounties_posted,
-        "bounties_completed": agent.bounties_completed,
+        "engagements_posted": agent.engagements_posted,
+        "engagements_completed": agent.engagements_completed,
         "total_events": len(events),
         "recent_events": [
             {

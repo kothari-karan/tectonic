@@ -10,8 +10,8 @@ from app.database import Base
 
 
 class AgentType(str, enum.Enum):
-    poster = "poster"
-    solver = "solver"
+    requester = "requester"
+    provider = "provider"
     both = "both"
 
 
@@ -29,8 +29,8 @@ class Agent(Base):
     api_key_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     capabilities: Mapped[list] = mapped_column(PG_JSON, default=list)
     reputation_score: Mapped[float] = mapped_column(Float, default=0.0)
-    bounties_posted: Mapped[int] = mapped_column(Integer, default=0)
-    bounties_completed: Mapped[int] = mapped_column(Integer, default=0)
+    engagements_posted: Mapped[int] = mapped_column(Integer, default=0)
+    engagements_completed: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
@@ -41,11 +41,12 @@ class Agent(Base):
     )
 
     # Relationships
-    posted_bounties = relationship(
-        "Bounty", foreign_keys="Bounty.poster_id", back_populates="poster"
+    posted_engagements = relationship(
+        "Engagement", foreign_keys="Engagement.requester_id", back_populates="requester"
     )
-    solved_bounties = relationship(
-        "Bounty", foreign_keys="Bounty.solver_id", back_populates="solver"
+    completed_engagements = relationship(
+        "Engagement", foreign_keys="Engagement.provider_id", back_populates="provider"
     )
-    proposals = relationship("Proposal", back_populates="solver")
+    proposals = relationship("Proposal", back_populates="provider")
     reputation_events = relationship("ReputationEvent", back_populates="agent")
+    service_listings = relationship("ServiceListing", back_populates="provider")

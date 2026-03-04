@@ -9,9 +9,9 @@ import EthAmount from '@/components/EthAmount';
 import ReputationBadge from '@/components/ReputationBadge';
 import NegotiationTimeline from '@/components/NegotiationTimeline';
 import ContractStatusTracker from '@/components/ContractStatusTracker';
-import { useBounty, useProposals, useAgent } from '@/lib/hooks';
+import { useEngagement, useProposals, useAgent } from '@/lib/hooks';
 import {
-  mockBounties,
+  mockEngagements,
   mockProposals,
   mockAgents,
   mockNegotiations,
@@ -23,52 +23,52 @@ function shortenAddress(addr: string): string {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
-export default function BountyDetailPage() {
+export default function EngagementDetailPage() {
   const params = useParams();
-  const bountyId = params.id as string;
+  const engagementId = params.id as string;
 
-  const { data: bounty } = useBounty(bountyId);
-  const { data: proposals } = useProposals(bountyId);
+  const { data: engagement } = useEngagement(engagementId);
+  const { data: proposals } = useProposals(engagementId);
 
   // Resolve data (with mock fallbacks)
-  const resolvedBounty =
-    bounty ?? mockBounties.find((b) => b.id === bountyId);
+  const resolvedEngagement =
+    engagement ?? mockEngagements.find((b) => b.id === engagementId);
   const resolvedProposals =
     proposals?.length !== undefined
       ? proposals
-      : mockProposals.filter((p) => p.bounty_id === bountyId);
+      : mockProposals.filter((p) => p.engagement_id === engagementId);
 
-  const poster = mockAgents.find((a) => a.id === resolvedBounty?.poster_id);
-  const solver = resolvedBounty?.solver_id
-    ? mockAgents.find((a) => a.id === resolvedBounty.solver_id)
+  const requester = mockAgents.find((a) => a.id === resolvedEngagement?.requester_id);
+  const provider = resolvedEngagement?.provider_id
+    ? mockAgents.find((a) => a.id === resolvedEngagement.provider_id)
     : null;
 
-  // Find negotiation & contract for this bounty
+  // Find negotiation & contract for this engagement
   const negotiation = mockNegotiations.find(
-    (n) => n.bounty_id === bountyId
+    (n) => n.engagement_id === engagementId
   );
   const negotiationTurns = negotiation
     ? mockNegotiationTurns.filter(
         (t) => t.negotiation_id === negotiation.id
       )
     : [];
-  const contract = mockContracts.find((c) => c.bounty_id === bountyId);
+  const contract = mockContracts.find((c) => c.engagement_id === engagementId);
 
-  if (!resolvedBounty) {
+  if (!resolvedEngagement) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <main className="max-w-4xl mx-auto px-6 py-8">
           <GlassCard>
             <p className="text-white/40 text-center py-8">
-              Bounty not found.
+              Engagement not found.
             </p>
             <div className="text-center">
               <Link
-                href="/solver"
+                href="/provider"
                 className="text-accent hover:text-accent/80 text-sm transition-colors"
               >
-                Back to Bounty Board
+                Back to Marketplace
               </Link>
             </div>
           </GlassCard>
@@ -84,10 +84,10 @@ export default function BountyDetailPage() {
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         {/* ── Back link ─────────────────────────────────────────── */}
         <Link
-          href="/solver"
+          href="/provider"
           className="text-white/40 hover:text-white/60 text-sm transition-colors inline-block"
         >
-          &larr; Back to Bounty Board
+          &larr; Back to Marketplace
         </Link>
 
         {/* ── Header ────────────────────────────────────────────── */}
@@ -95,19 +95,19 @@ export default function BountyDetailPage() {
           <div className="flex items-start justify-between gap-4 mb-6">
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-white mb-2">
-                {resolvedBounty.title}
+                {resolvedEngagement.title}
               </h1>
               <div className="flex items-center gap-3 flex-wrap">
-                <StatusBadge status={resolvedBounty.status} />
+                <StatusBadge status={resolvedEngagement.status} />
                 <span className="text-white/30">|</span>
                 <EthAmount
-                  amount={resolvedBounty.reward_amount}
+                  amount={resolvedEngagement.reward_amount}
                   className="text-white text-lg"
                 />
                 <span className="text-white/30">|</span>
                 <span className="text-white/40 text-sm">
                   Due{' '}
-                  {new Date(resolvedBounty.deadline).toLocaleDateString(
+                  {new Date(resolvedEngagement.deadline).toLocaleDateString(
                     undefined,
                     { month: 'long', day: 'numeric', year: 'numeric' }
                   )}
@@ -122,7 +122,7 @@ export default function BountyDetailPage() {
                 Description
               </h3>
               <p className="text-white/70 leading-relaxed">
-                {resolvedBounty.description}
+                {resolvedEngagement.description}
               </p>
             </div>
 
@@ -131,7 +131,7 @@ export default function BountyDetailPage() {
                 Acceptance Criteria
               </h3>
               <ul className="space-y-1.5">
-                {resolvedBounty.acceptance_criteria.map((criterion, i) => (
+                {resolvedEngagement.acceptance_criteria.map((criterion, i) => (
                   <li key={i} className="flex items-start gap-2 text-white/60 text-sm">
                     <span className="text-accent mt-0.5 shrink-0">&#9679;</span>
                     <span>{criterion}</span>
@@ -142,42 +142,42 @@ export default function BountyDetailPage() {
           </div>
         </GlassCard>
 
-        {/* ── Poster Info ───────────────────────────────────────── */}
-        {poster && (
+        {/* ── Requester Info ───────────────────────────────────────── */}
+        {requester && (
           <GlassCard>
             <h3 className="text-sm text-white/40 uppercase tracking-wider mb-3">
-              Posted By
+              Requested By
             </h3>
             <div className="flex items-center gap-4">
-              <ReputationBadge score={poster.reputation_score} size="md" />
+              <ReputationBadge score={requester.reputation_score} size="md" />
               <div>
-                <p className="text-white font-medium">{poster.name}</p>
+                <p className="text-white font-medium">{requester.name}</p>
                 <p className="text-white/30 text-xs font-mono">
-                  {shortenAddress(poster.wallet_address)}
+                  {shortenAddress(requester.wallet_address)}
                 </p>
                 <p className="text-white/40 text-xs mt-0.5">
-                  {poster.bounties_posted} bounties posted
+                  {requester.engagements_posted} engagements posted
                 </p>
               </div>
             </div>
           </GlassCard>
         )}
 
-        {/* ── Solver Info (if assigned) ─────────────────────────── */}
-        {solver && (
+        {/* ── Provider Info (if assigned) ─────────────────────────── */}
+        {provider && (
           <GlassCard>
             <h3 className="text-sm text-white/40 uppercase tracking-wider mb-3">
-              Solver
+              Provider
             </h3>
             <div className="flex items-center gap-4">
-              <ReputationBadge score={solver.reputation_score} size="md" />
+              <ReputationBadge score={provider.reputation_score} size="md" />
               <div>
-                <p className="text-white font-medium">{solver.name}</p>
+                <p className="text-white font-medium">{provider.name}</p>
                 <p className="text-white/30 text-xs font-mono">
-                  {shortenAddress(solver.wallet_address)}
+                  {shortenAddress(provider.wallet_address)}
                 </p>
                 <p className="text-white/40 text-xs mt-0.5">
-                  {solver.bounties_completed} bounties completed
+                  {provider.engagements_completed} engagements completed
                 </p>
               </div>
             </div>
@@ -192,22 +192,22 @@ export default function BountyDetailPage() {
             </h2>
             <div className="space-y-3">
               {resolvedProposals.map((proposal) => {
-                const proposalSolver = mockAgents.find(
-                  (a) => a.id === proposal.solver_id
+                const proposalProvider = mockAgents.find(
+                  (a) => a.id === proposal.provider_id
                 );
                 return (
                   <GlassCard key={proposal.id}>
                     <div className="flex items-center justify-between gap-4 mb-3">
                       <div className="flex items-center gap-3">
-                        {proposalSolver && (
+                        {proposalProvider && (
                           <ReputationBadge
-                            score={proposalSolver.reputation_score}
+                            score={proposalProvider.reputation_score}
                             size="sm"
                           />
                         )}
                         <div>
                           <p className="text-white font-medium text-sm">
-                            {proposalSolver?.name ?? 'Unknown'}
+                            {proposalProvider?.name ?? 'Unknown'}
                           </p>
                           <p className="text-white/40 text-xs">
                             Proposed{' '}
@@ -316,18 +316,18 @@ export default function BountyDetailPage() {
         )}
 
         {/* ── Deliverable ───────────────────────────────────────── */}
-        {resolvedBounty.deliverable_url && (
+        {resolvedEngagement.deliverable_url && (
           <GlassCard>
             <h3 className="text-sm text-white/40 uppercase tracking-wider mb-2">
               Deliverable
             </h3>
             <a
-              href={resolvedBounty.deliverable_url}
+              href={resolvedEngagement.deliverable_url}
               target="_blank"
               rel="noopener noreferrer"
               className="text-accent hover:text-accent/80 transition-colors underline underline-offset-2 text-sm"
             >
-              {resolvedBounty.deliverable_url}
+              {resolvedEngagement.deliverable_url}
             </a>
           </GlassCard>
         )}

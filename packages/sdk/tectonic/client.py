@@ -8,20 +8,30 @@ from .types import (
     Agent,
     AgentCreate,
     AgentRegisterResponse,
-    Bounty,
-    BountyCreate,
-    BountyListResponse,
-    BountyUpdate,
+    AgreementCreate,
+    AgreementListResponse,
+    AgreementTask,
+    AgreementTaskCreate,
+    AgreementUpdate,
+    Engagement,
+    EngagementCreate,
+    EngagementListResponse,
+    EngagementUpdate,
     Contract,
     ContractDeliverRequest,
     ContractFundRequest,
     ContractVerifyRequest,
+    ListingCreate,
+    ListingListResponse,
+    ListingUpdate,
     Negotiation,
     NegotiationTurn,
     NegotiationTurnRequest,
     Proposal,
     ProposalCreate,
     ReputationSummary,
+    ServiceListing,
+    StandingAgreement,
 )
 
 
@@ -31,7 +41,7 @@ class TectonicClient:
     Usage::
 
         async with TectonicClient("http://localhost:8000", api_key="tec_...") as client:
-            bounty = await client.create_bounty(BountyCreate(...))
+            engagement = await client.create_engagement(EngagementCreate(...))
     """
 
     def __init__(
@@ -95,48 +105,61 @@ class TectonicClient:
         resp.raise_for_status()
         return ReputationSummary.model_validate(resp.json())
 
+    async def get_inbox(
+        self,
+        agent_id: str,
+        status: str | None = None,
+    ) -> EngagementListResponse:
+        """Get engagements targeted at a provider (direct/invited)."""
+        params: dict[str, str] = {}
+        if status is not None:
+            params["status"] = status
+        resp = await self._client.get(f"/agents/{agent_id}/inbox", params=params)
+        resp.raise_for_status()
+        return EngagementListResponse.model_validate(resp.json())
+
     # ------------------------------------------------------------------
-    # Bounties
+    # Engagements
     # ------------------------------------------------------------------
 
-    async def create_bounty(self, data: BountyCreate) -> Bounty:
-        """Create a new bounty."""
+    async def create_engagement(self, data: EngagementCreate) -> Engagement:
+        """Create a new engagement."""
         resp = await self._client.post(
-            "/bounties",
+            "/engagements",
             json=data.model_dump(mode="json"),
         )
         resp.raise_for_status()
-        return Bounty.model_validate(resp.json())
+        return Engagement.model_validate(resp.json())
 
-    async def list_bounties(
+    async def list_engagements(
         self,
         status: str | None = None,
         category: str | None = None,
-    ) -> BountyListResponse:
-        """List bounties, optionally filtered by status and/or category."""
+    ) -> EngagementListResponse:
+        """List engagements, optionally filtered by status and/or category."""
         params: dict[str, str] = {}
         if status is not None:
             params["status"] = status
         if category is not None:
             params["category"] = category
-        resp = await self._client.get("/bounties", params=params)
+        resp = await self._client.get("/engagements", params=params)
         resp.raise_for_status()
-        return BountyListResponse.model_validate(resp.json())
+        return EngagementListResponse.model_validate(resp.json())
 
-    async def get_bounty(self, bounty_id: str) -> Bounty:
-        """Retrieve a single bounty by ID."""
-        resp = await self._client.get(f"/bounties/{bounty_id}")
+    async def get_engagement(self, engagement_id: str) -> Engagement:
+        """Retrieve a single engagement by ID."""
+        resp = await self._client.get(f"/engagements/{engagement_id}")
         resp.raise_for_status()
-        return Bounty.model_validate(resp.json())
+        return Engagement.model_validate(resp.json())
 
-    async def update_bounty(self, bounty_id: str, data: BountyUpdate) -> Bounty:
-        """Update an existing bounty."""
+    async def update_engagement(self, engagement_id: str, data: EngagementUpdate) -> Engagement:
+        """Update an existing engagement."""
         resp = await self._client.patch(
-            f"/bounties/{bounty_id}",
+            f"/engagements/{engagement_id}",
             json=data.model_dump(mode="json", exclude_none=True),
         )
         resp.raise_for_status()
-        return Bounty.model_validate(resp.json())
+        return Engagement.model_validate(resp.json())
 
     # ------------------------------------------------------------------
     # Proposals
@@ -144,20 +167,20 @@ class TectonicClient:
 
     async def create_proposal(
         self,
-        bounty_id: str,
+        engagement_id: str,
         data: ProposalCreate,
     ) -> Proposal:
-        """Submit a proposal on a bounty."""
+        """Submit a proposal on an engagement."""
         resp = await self._client.post(
-            f"/bounties/{bounty_id}/proposals",
+            f"/engagements/{engagement_id}/proposals",
             json=data.model_dump(mode="json"),
         )
         resp.raise_for_status()
         return Proposal.model_validate(resp.json())
 
-    async def list_proposals(self, bounty_id: str) -> list[Proposal]:
-        """List all proposals for a bounty."""
-        resp = await self._client.get(f"/bounties/{bounty_id}/proposals")
+    async def list_proposals(self, engagement_id: str) -> list[Proposal]:
+        """List all proposals for an engagement."""
+        resp = await self._client.get(f"/engagements/{engagement_id}/proposals")
         resp.raise_for_status()
         raw = resp.json()
         # The API may return either a bare list or an object with a
@@ -171,13 +194,13 @@ class TectonicClient:
 
     async def create_negotiation(
         self,
-        bounty_id: str,
+        engagement_id: str,
         proposal_id: str,
     ) -> Negotiation:
-        """Start a negotiation between poster and solver."""
+        """Start a negotiation between requester and provider."""
         resp = await self._client.post(
             "/negotiations",
-            json={"bounty_id": bounty_id, "proposal_id": proposal_id},
+            json={"engagement_id": engagement_id, "proposal_id": proposal_id},
         )
         resp.raise_for_status()
         return Negotiation.model_validate(resp.json())
@@ -215,13 +238,13 @@ class TectonicClient:
 
     async def create_contract(
         self,
-        bounty_id: str,
+        engagement_id: str,
         negotiation_id: str,
     ) -> Contract:
         """Create a contract from an agreed negotiation."""
         resp = await self._client.post(
             "/contracts",
-            json={"bounty_id": bounty_id, "negotiation_id": negotiation_id},
+            json={"engagement_id": engagement_id, "negotiation_id": negotiation_id},
         )
         resp.raise_for_status()
         return Contract.model_validate(resp.json())
@@ -270,3 +293,125 @@ class TectonicClient:
         resp = await self._client.post(f"/contracts/{contract_id}/dispute")
         resp.raise_for_status()
         return Contract.model_validate(resp.json())
+
+    # ------------------------------------------------------------------
+    # Service Listings
+    # ------------------------------------------------------------------
+
+    async def create_listing(self, data: ListingCreate) -> ServiceListing:
+        """Create a new service listing."""
+        resp = await self._client.post(
+            "/listings",
+            json=data.model_dump(mode="json"),
+        )
+        resp.raise_for_status()
+        return ServiceListing.model_validate(resp.json())
+
+    async def list_listings(
+        self,
+        availability: str | None = None,
+        capability: str | None = None,
+    ) -> ListingListResponse:
+        """List service listings with optional filters."""
+        params: dict[str, str] = {}
+        if availability is not None:
+            params["availability"] = availability
+        if capability is not None:
+            params["capability"] = capability
+        resp = await self._client.get("/listings", params=params)
+        resp.raise_for_status()
+        return ListingListResponse.model_validate(resp.json())
+
+    async def get_listing(self, listing_id: str) -> ServiceListing:
+        """Get a service listing by ID."""
+        resp = await self._client.get(f"/listings/{listing_id}")
+        resp.raise_for_status()
+        return ServiceListing.model_validate(resp.json())
+
+    async def update_listing(self, listing_id: str, data: ListingUpdate) -> ServiceListing:
+        """Update a service listing."""
+        resp = await self._client.patch(
+            f"/listings/{listing_id}",
+            json=data.model_dump(mode="json", exclude_none=True),
+        )
+        resp.raise_for_status()
+        return ServiceListing.model_validate(resp.json())
+
+    async def engage_listing(
+        self,
+        listing_id: str,
+        title: str,
+        description: str,
+        reward_amount: float,
+    ) -> Engagement:
+        """Create a direct engagement from a service listing."""
+        resp = await self._client.post(
+            f"/listings/{listing_id}/engage",
+            params={
+                "title": title,
+                "description": description,
+                "reward_amount": str(reward_amount),
+            },
+        )
+        resp.raise_for_status()
+        return Engagement.model_validate(resp.json())
+
+    # ------------------------------------------------------------------
+    # Standing Agreements
+    # ------------------------------------------------------------------
+
+    async def create_agreement(self, data: AgreementCreate) -> StandingAgreement:
+        """Create a new standing agreement."""
+        resp = await self._client.post(
+            "/agreements",
+            json=data.model_dump(mode="json"),
+        )
+        resp.raise_for_status()
+        return StandingAgreement.model_validate(resp.json())
+
+    async def list_agreements(
+        self,
+        agent_id: str | None = None,
+        status: str | None = None,
+    ) -> AgreementListResponse:
+        """List standing agreements with optional filters."""
+        params: dict[str, str] = {}
+        if agent_id is not None:
+            params["agent_id"] = agent_id
+        if status is not None:
+            params["status"] = status
+        resp = await self._client.get("/agreements", params=params)
+        resp.raise_for_status()
+        return AgreementListResponse.model_validate(resp.json())
+
+    async def get_agreement(self, agreement_id: str) -> StandingAgreement:
+        """Get a standing agreement by ID."""
+        resp = await self._client.get(f"/agreements/{agreement_id}")
+        resp.raise_for_status()
+        return StandingAgreement.model_validate(resp.json())
+
+    async def update_agreement(
+        self,
+        agreement_id: str,
+        data: AgreementUpdate,
+    ) -> StandingAgreement:
+        """Update a standing agreement (pause/terminate)."""
+        resp = await self._client.patch(
+            f"/agreements/{agreement_id}",
+            json=data.model_dump(mode="json", exclude_none=True),
+        )
+        resp.raise_for_status()
+        return StandingAgreement.model_validate(resp.json())
+
+    async def dispatch_task(
+        self,
+        agreement_id: str,
+        data: AgreementTaskCreate,
+    ) -> AgreementTask:
+        """Dispatch a task under a standing agreement."""
+        resp = await self._client.post(
+            f"/agreements/{agreement_id}/tasks",
+            json=data.model_dump(mode="json"),
+        )
+        resp.raise_for_status()
+        return AgreementTask.model_validate(resp.json())

@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import Header from '@/components/Header';
 import GlassCard from '@/components/GlassCard';
-import BountyCard from '@/components/BountyCard';
+import EngagementCard from '@/components/EngagementCard';
 import StatusBadge from '@/components/StatusBadge';
 import EthAmount from '@/components/EthAmount';
 import ContractStatusTracker from '@/components/ContractStatusTracker';
 import NegotiationTimeline from '@/components/NegotiationTimeline';
-import { useBounties, useContracts, useNegotiations, useNegotiationTurns } from '@/lib/hooks';
+import { useEngagements, useContracts, useNegotiations, useNegotiationTurns } from '@/lib/hooks';
 import {
-  mockBounties,
+  mockEngagements,
   mockContracts,
   mockNegotiations,
   mockNegotiationTurns,
@@ -18,11 +18,11 @@ import {
   mockProposals,
 } from '@/lib/mock-data';
 
-const POSTER_ID = 'agent-poster-001';
+const REQUESTER_ID = 'agent-requester-001';
 
-// ── Post New Bounty Form ────────────────────────────────────────────────────
+// ── Post New Engagement Form ────────────────────────────────────────────────
 
-function PostBountyForm() {
+function PostEngagementForm() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [criteria, setCriteria] = useState<string[]>(['']);
@@ -47,14 +47,14 @@ function PostBountyForm() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // In a real app this would call createBounty() from api.ts
+    // In a real app this would call createEngagement() from api.ts
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
   }
 
   return (
     <GlassCard>
-      <h2 className="text-xl font-bold text-white mb-6">Post New Bounty</h2>
+      <h2 className="text-xl font-bold text-white mb-6">Post New Engagement</h2>
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-sm text-white/60 mb-1.5">Title</label>
@@ -175,7 +175,7 @@ function PostBountyForm() {
           type="submit"
           className="w-full bg-accent hover:bg-accent/80 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]"
         >
-          {submitted ? 'Bounty Posted!' : 'Post Bounty'}
+          {submitted ? 'Engagement Posted!' : 'Post Engagement'}
         </button>
       </form>
     </GlassCard>
@@ -186,8 +186,8 @@ function PostBountyForm() {
 
 function NegotiationItem({ negotiation }: { negotiation: typeof mockNegotiations[0] }) {
   const [expanded, setExpanded] = useState(false);
-  const bounty = mockBounties.find((b) => b.id === negotiation.bounty_id);
-  const solver = mockAgents.find((a) => a.id === negotiation.solver_id);
+  const engagement = mockEngagements.find((b) => b.id === negotiation.engagement_id);
+  const provider = mockAgents.find((a) => a.id === negotiation.provider_id);
   const turns = mockNegotiationTurns.filter(
     (t) => t.negotiation_id === negotiation.id
   );
@@ -197,10 +197,10 @@ function NegotiationItem({ negotiation }: { negotiation: typeof mockNegotiations
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h4 className="text-white font-medium truncate">
-            {bounty?.title ?? negotiation.bounty_id}
+            {engagement?.title ?? negotiation.engagement_id}
           </h4>
           <p className="text-white/40 text-sm mt-0.5">
-            with {solver?.name ?? 'Unknown'} &middot; {negotiation.turn_count}{' '}
+            with {provider?.name ?? 'Unknown'} &middot; {negotiation.turn_count}{' '}
             turns
           </p>
         </div>
@@ -225,32 +225,32 @@ function NegotiationItem({ negotiation }: { negotiation: typeof mockNegotiations
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 
-export default function PosterDashboard() {
-  const { data: bounties } = useBounties({ poster_id: POSTER_ID });
-  const { data: contracts } = useContracts({ poster_id: POSTER_ID });
-  const { data: negotiations } = useNegotiations({ poster_id: POSTER_ID });
+export default function RequesterDashboard() {
+  const { data: engagements } = useEngagements({ requester_id: REQUESTER_ID });
+  const { data: contracts } = useContracts({ requester_id: REQUESTER_ID });
+  const { data: negotiations } = useNegotiations({ requester_id: REQUESTER_ID });
 
-  const posterBounties = bounties?.length
-    ? bounties.filter((b) => b.poster_id === POSTER_ID)
-    : mockBounties.filter((b) => b.poster_id === POSTER_ID);
+  const requesterEngagements = engagements?.length
+    ? engagements.filter((b) => b.requester_id === REQUESTER_ID)
+    : mockEngagements.filter((b) => b.requester_id === REQUESTER_ID);
 
-  const posterContracts = contracts?.length
-    ? contracts.filter((c) => c.poster_id === POSTER_ID)
-    : mockContracts.filter((c) => c.poster_id === POSTER_ID);
+  const requesterContracts = contracts?.length
+    ? contracts.filter((c) => c.requester_id === REQUESTER_ID)
+    : mockContracts.filter((c) => c.requester_id === REQUESTER_ID);
 
-  const posterNegotiations = negotiations?.length
-    ? negotiations.filter((n) => n.poster_id === POSTER_ID)
-    : mockNegotiations.filter((n) => n.poster_id === POSTER_ID);
+  const requesterNegotiations = negotiations?.length
+    ? negotiations.filter((n) => n.requester_id === REQUESTER_ID)
+    : mockNegotiations.filter((n) => n.requester_id === REQUESTER_ID);
 
-  const totalEscrowed = posterContracts
+  const totalEscrowed = requesterContracts
     .filter((c) => c.status !== 'settled' && c.status !== 'cancelled')
     .reduce((sum, c) => sum + c.amount, 0);
 
-  const totalPaid = posterContracts
+  const totalPaid = requesterContracts
     .filter((c) => c.status === 'settled')
     .reduce((sum, c) => sum + c.amount, 0);
 
-  const activeBountyCount = posterBounties.filter(
+  const activeEngagementCount = requesterEngagements.filter(
     (b) => b.status !== 'settled' && b.status !== 'cancelled'
   ).length;
 
@@ -274,26 +274,26 @@ export default function PosterDashboard() {
               <EthAmount amount={totalPaid} className="text-2xl text-green-400" />
             </GlassCard>
             <GlassCard>
-              <p className="text-white/40 text-sm mb-1">Active Bounties</p>
-              <p className="text-2xl font-bold text-white">{activeBountyCount}</p>
+              <p className="text-white/40 text-sm mb-1">Active Engagements</p>
+              <p className="text-2xl font-bold text-white">{activeEngagementCount}</p>
             </GlassCard>
           </div>
         </section>
 
-        {/* ── My Bounties ───────────────────────────────────────── */}
+        {/* ── My Engagements ───────────────────────────────────────── */}
         <section>
           <h2 className="text-lg font-semibold text-white/80 mb-4">
-            My Bounties
+            My Engagements
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {posterBounties.map((bounty) => {
+            {requesterEngagements.map((engagement) => {
               const proposals = mockProposals.filter(
-                (p) => p.bounty_id === bounty.id
+                (p) => p.engagement_id === engagement.id
               );
               return (
-                <BountyCard
-                  key={bounty.id}
-                  bounty={bounty}
+                <EngagementCard
+                  key={engagement.id}
+                  engagement={engagement}
                   proposalCount={proposals.length}
                 />
               );
@@ -301,9 +301,9 @@ export default function PosterDashboard() {
           </div>
         </section>
 
-        {/* ── Post New Bounty ───────────────────────────────────── */}
+        {/* ── Post New Engagement ───────────────────────────────────── */}
         <section>
-          <PostBountyForm />
+          <PostEngagementForm />
         </section>
 
         {/* ── Active Negotiations ───────────────────────────────── */}
@@ -311,7 +311,7 @@ export default function PosterDashboard() {
           <h2 className="text-lg font-semibold text-white/80 mb-4">
             Active Negotiations
           </h2>
-          {posterNegotiations.length === 0 ? (
+          {requesterNegotiations.length === 0 ? (
             <GlassCard>
               <p className="text-white/40 text-center py-4">
                 No active negotiations.
@@ -319,7 +319,7 @@ export default function PosterDashboard() {
             </GlassCard>
           ) : (
             <div className="space-y-4">
-              {posterNegotiations.map((n) => (
+              {requesterNegotiations.map((n) => (
                 <NegotiationItem key={n.id} negotiation={n} />
               ))}
             </div>
@@ -331,28 +331,28 @@ export default function PosterDashboard() {
           <h2 className="text-lg font-semibold text-white/80 mb-4">
             My Contracts
           </h2>
-          {posterContracts.length === 0 ? (
+          {requesterContracts.length === 0 ? (
             <GlassCard>
               <p className="text-white/40 text-center py-4">No contracts yet.</p>
             </GlassCard>
           ) : (
             <div className="space-y-4">
-              {posterContracts.map((contract) => {
-                const bounty = mockBounties.find(
-                  (b) => b.id === contract.bounty_id
+              {requesterContracts.map((contract) => {
+                const engagement = mockEngagements.find(
+                  (b) => b.id === contract.engagement_id
                 );
-                const solver = mockAgents.find(
-                  (a) => a.id === contract.solver_id
+                const provider = mockAgents.find(
+                  (a) => a.id === contract.provider_id
                 );
                 return (
                   <GlassCard key={contract.id}>
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h4 className="text-white font-medium">
-                          {bounty?.title ?? contract.bounty_id}
+                          {engagement?.title ?? contract.engagement_id}
                         </h4>
                         <p className="text-white/40 text-sm mt-0.5">
-                          Solver: {solver?.name ?? 'Unknown'} &middot;{' '}
+                          Provider: {provider?.name ?? 'Unknown'} &middot;{' '}
                           <EthAmount amount={contract.amount} />
                         </p>
                       </div>

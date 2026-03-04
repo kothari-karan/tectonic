@@ -15,7 +15,7 @@ async def test_register_and_authenticate(client):
     # Register
     resp = await client.post(
         "/agents/register",
-        json={"name": "AuthTestAgent", "agent_type": "poster"},
+        json={"name": "AuthTestAgent", "agent_type": "requester"},
     )
     assert resp.status_code == 201
     body = resp.json()
@@ -28,9 +28,9 @@ async def test_register_and_authenticate(client):
     headers = {"X-API-Key": api_key}
     deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     resp = await client.post(
-        "/bounties",
+        "/engagements",
         json={
-            "title": "Auth test bounty",
+            "title": "Auth test engagement",
             "description": "Testing auth",
             "acceptance_criteria": ["Works"],
             "category": "development",
@@ -40,7 +40,7 @@ async def test_register_and_authenticate(client):
         headers=headers,
     )
     assert resp.status_code == 201
-    assert resp.json()["poster_id"] == agent_id
+    assert resp.json()["requester_id"] == agent_id
 
 
 @pytest.mark.asyncio
@@ -48,7 +48,7 @@ async def test_invalid_api_key_rejected(client):
     """Invalid API key should be rejected with 401."""
     deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     resp = await client.post(
-        "/bounties",
+        "/engagements",
         json={
             "title": "Should fail",
             "description": "Invalid auth",
@@ -67,7 +67,7 @@ async def test_missing_api_key_rejected(client):
     """Missing API key should be rejected with 422 (header is required)."""
     deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     resp = await client.post(
-        "/bounties",
+        "/engagements",
         json={
             "title": "Should fail",
             "description": "No auth",
@@ -83,12 +83,12 @@ async def test_missing_api_key_rejected(client):
 @pytest.mark.asyncio
 async def test_public_endpoints_dont_require_auth(client):
     """Public endpoints should work without auth."""
-    # List bounties (public)
-    resp = await client.get("/bounties")
+    # List engagements (public)
+    resp = await client.get("/engagements")
     assert resp.status_code == 200
 
     # Get agent (public)
-    agent, _ = await register_agent(client, "PublicTestAgent", "solver")
+    agent, _ = await register_agent(client, "PublicTestAgent", "provider")
     resp = await client.get(f"/agents/{agent['id']}")
     assert resp.status_code == 200
 
@@ -100,30 +100,30 @@ async def test_public_endpoints_dont_require_auth(client):
 @pytest.mark.asyncio
 async def test_duplicate_agent_name_rejected(client):
     """Registering with a duplicate name should fail."""
-    await register_agent(client, "UniqueName", "poster")
+    await register_agent(client, "UniqueName", "requester")
     resp = await client.post(
         "/agents/register",
-        json={"name": "UniqueName", "agent_type": "solver"},
+        json={"name": "UniqueName", "agent_type": "provider"},
     )
     # Should get an error (409 conflict or 400 bad request)
     assert resp.status_code in (400, 409, 422, 500)
 
 
 @pytest.mark.asyncio
-async def test_solver_cannot_post_bounty(client):
-    """Solver agents may still post bounties if agent_type is 'solver'.
+async def test_provider_cannot_post_engagement(client):
+    """Provider agents may still post engagements if agent_type is 'provider'.
 
     This depends on the API implementation — some designs allow any
     authenticated agent to post. We check the behavior is consistent.
     """
-    solver, solver_key = await register_agent(client, "SolverOnlyAgent", "solver")
-    headers = await auth_headers(solver_key)
+    provider, provider_key = await register_agent(client, "ProviderOnlyAgent", "provider")
+    headers = await auth_headers(provider_key)
     deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     resp = await client.post(
-        "/bounties",
+        "/engagements",
         json={
-            "title": "Solver posting",
-            "description": "Solver tries to post",
+            "title": "Provider posting",
+            "description": "Provider tries to post",
             "acceptance_criteria": ["Works"],
             "category": "development",
             "reward_amount": 0.01,

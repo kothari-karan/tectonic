@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from tectonic import (
-    BountyCreate,
+    EngagementCreate,
     ContractDeliverRequest,
     ContractFundRequest,
     ContractVerifyRequest,
@@ -48,11 +48,11 @@ def _client() -> TectonicClient:
 
 
 # ------------------------------------------------------------------
-# Poster-side tools
+# Requester-side tools
 # ------------------------------------------------------------------
 
 
-async def tectonic_post_bounty(
+async def tectonic_post_engagement(
     title: str,
     description: str,
     criteria: list[str],
@@ -60,10 +60,10 @@ async def tectonic_post_bounty(
     reward: float,
     deadline: str,
 ) -> dict:
-    """Post a new bounty to Tectonic.
+    """Post a new engagement to Tectonic.
 
     Args:
-        title: Short title of the bounty.
+        title: Short title of the engagement.
         description: Detailed description of the work required.
         criteria: List of acceptance criteria.
         category: Category tag (e.g. "development", "design").
@@ -71,12 +71,12 @@ async def tectonic_post_bounty(
         deadline: ISO-8601 deadline string.
 
     Returns:
-        A dict with bounty details or an error message.
+        A dict with engagement details or an error message.
     """
     try:
         async with _client() as client:
-            bounty = await client.create_bounty(
-                BountyCreate(
+            engagement = await client.create_engagement(
+                EngagementCreate(
                     title=title,
                     description=description,
                     acceptance_criteria=criteria,
@@ -86,36 +86,36 @@ async def tectonic_post_bounty(
                 )
             )
             return {
-                "bounty_id": bounty.id,
-                "title": bounty.title,
-                "status": bounty.status.value,
-                "reward_amount": bounty.reward_amount,
-                "reward_token": bounty.reward_token,
-                "deadline": bounty.deadline.isoformat(),
+                "engagement_id": engagement.id,
+                "title": engagement.title,
+                "status": engagement.status.value,
+                "reward_amount": engagement.reward_amount,
+                "reward_token": engagement.reward_token,
+                "deadline": engagement.deadline.isoformat(),
             }
     except Exception as exc:
         return {"error": str(exc)}
 
 
-async def tectonic_list_proposals(bounty_id: str) -> dict:
-    """List all proposals for a bounty.
+async def tectonic_list_proposals(engagement_id: str) -> dict:
+    """List all proposals for an engagement.
 
     Args:
-        bounty_id: The bounty ID to list proposals for.
+        engagement_id: The engagement ID to list proposals for.
 
     Returns:
         A dict with proposals list or an error message.
     """
     try:
         async with _client() as client:
-            proposals = await client.list_proposals(bounty_id)
+            proposals = await client.list_proposals(engagement_id)
             return {
-                "bounty_id": bounty_id,
+                "engagement_id": engagement_id,
                 "count": len(proposals),
                 "proposals": [
                     {
                         "proposal_id": p.id,
-                        "solver_id": p.solver_id,
+                        "provider_id": p.provider_id,
                         "proposed_price": p.proposed_price,
                         "proposed_deadline": p.proposed_deadline.isoformat(),
                         "approach_summary": p.approach_summary,
@@ -128,11 +128,11 @@ async def tectonic_list_proposals(bounty_id: str) -> dict:
         return {"error": str(exc)}
 
 
-async def tectonic_start_negotiation(bounty_id: str, proposal_id: str) -> dict:
-    """Start negotiation with a solver.
+async def tectonic_start_negotiation(engagement_id: str, proposal_id: str) -> dict:
+    """Start negotiation with a provider.
 
     Args:
-        bounty_id: The bounty ID.
+        engagement_id: The engagement ID.
         proposal_id: The proposal ID to negotiate on.
 
     Returns:
@@ -140,12 +140,12 @@ async def tectonic_start_negotiation(bounty_id: str, proposal_id: str) -> dict:
     """
     try:
         async with _client() as client:
-            neg = await client.create_negotiation(bounty_id, proposal_id)
+            neg = await client.create_negotiation(engagement_id, proposal_id)
             return {
                 "negotiation_id": neg.id,
-                "bounty_id": neg.bounty_id,
-                "poster_id": neg.poster_id,
-                "solver_id": neg.solver_id,
+                "engagement_id": neg.engagement_id,
+                "requester_id": neg.requester_id,
+                "provider_id": neg.provider_id,
                 "status": neg.status.value,
                 "max_turns": neg.max_turns,
             }
@@ -249,8 +249,8 @@ async def tectonic_fund_escrow(
 async def tectonic_review_delivery(contract_id: str) -> dict:
     """Get delivery details for review.
 
-    Fetches the bounty associated with the contract to get the
-    deliverable URL and other details for the poster to review.
+    Fetches the engagement associated with the contract to get the
+    deliverable URL and other details for the requester to review.
 
     Args:
         contract_id: The contract ID.
@@ -260,28 +260,28 @@ async def tectonic_review_delivery(contract_id: str) -> dict:
     """
     try:
         async with _client() as client:
-            # Fetch the bounty to get deliverable_url
-            # We need to go through the contract -> bounty path
+            # Fetch the engagement to get deliverable_url
+            # We need to go through the contract -> engagement path
             # Since we don't have a get_contract endpoint yet,
-            # we use the bounty endpoint
-            bounty_result = await client.list_bounties(status="delivered")
+            # we use the engagement endpoint
+            engagement_result = await client.list_engagements(status="delivered")
             matching = [
-                b for b in bounty_result.bounties if b.deliverable_url is not None
+                b for b in engagement_result.engagements if b.deliverable_url is not None
             ]
             if not matching:
                 return {
                     "contract_id": contract_id,
-                    "message": "No delivered bounties found. Delivery may not have been submitted yet.",
+                    "message": "No delivered engagements found. Delivery may not have been submitted yet.",
                 }
             # Return the first matching delivery
-            bounty = matching[0]
+            engagement = matching[0]
             return {
                 "contract_id": contract_id,
-                "bounty_id": bounty.id,
-                "title": bounty.title,
-                "deliverable_url": bounty.deliverable_url,
-                "acceptance_criteria": bounty.acceptance_criteria,
-                "status": bounty.status.value,
+                "engagement_id": engagement.id,
+                "title": engagement.title,
+                "deliverable_url": engagement.deliverable_url,
+                "acceptance_criteria": engagement.acceptance_criteria,
+                "status": engagement.status.value,
             }
     except Exception as exc:
         return {"error": str(exc)}
@@ -313,26 +313,26 @@ async def tectonic_verify_delivery(contract_id: str, approved: bool) -> dict:
         return {"error": str(exc)}
 
 
-async def tectonic_my_bounties() -> dict:
-    """Get all bounties posted by the current agent.
+async def tectonic_my_engagements() -> dict:
+    """Get all engagements posted by the current agent.
 
     Returns:
-        A dict with bounties list or an error message.
+        A dict with engagements list or an error message.
     """
     try:
         async with _client() as client:
-            result = await client.list_bounties()
+            result = await client.list_engagements()
             return {
                 "total": result.total,
-                "bounties": [
+                "engagements": [
                     {
-                        "bounty_id": b.id,
+                        "engagement_id": b.id,
                         "title": b.title,
                         "status": b.status.value,
                         "reward_amount": b.reward_amount,
                         "reward_token": b.reward_token,
                     }
-                    for b in result.bounties
+                    for b in result.engagements
                 ],
             }
     except Exception as exc:
@@ -354,8 +354,8 @@ async def tectonic_my_reputation() -> dict:
             return {
                 "agent_id": rep.agent_id,
                 "reputation_score": rep.reputation_score,
-                "bounties_posted": rep.bounties_posted,
-                "bounties_completed": rep.bounties_completed,
+                "engagements_posted": rep.engagements_posted,
+                "engagements_completed": rep.engagements_completed,
                 "recent_events": rep.events[:5],
             }
     except Exception as exc:
@@ -363,34 +363,65 @@ async def tectonic_my_reputation() -> dict:
 
 
 # ------------------------------------------------------------------
-# Solver-side tools
+# Provider-side tools
 # ------------------------------------------------------------------
 
 
-async def tectonic_browse_bounties(
+async def tectonic_check_inbox(agent_id: str) -> dict:
+    """Check a provider's inbox for direct/invited engagements.
+
+    Args:
+        agent_id: The provider agent's ID.
+
+    Returns:
+        A dict with targeted engagements or an error message.
+    """
+    try:
+        async with _client() as client:
+            result = await client.get_inbox(agent_id)
+            return {
+                "total": result.total,
+                "engagements": [
+                    {
+                        "engagement_id": e.id,
+                        "title": e.title,
+                        "description": e.description[:200],
+                        "engagement_type": e.engagement_type.value,
+                        "reward_amount": e.reward_amount,
+                        "deadline": e.deadline.isoformat(),
+                        "requester_id": e.requester_id,
+                    }
+                    for e in result.engagements
+                ],
+            }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+async def tectonic_browse_engagements(
     category: Optional[str] = None,
     min_reward: Optional[float] = None,
 ) -> dict:
-    """Browse open bounties (solver perspective).
+    """Browse open engagements (provider perspective).
 
     Args:
         category: Optional category filter.
         min_reward: Optional minimum reward filter (client-side).
 
     Returns:
-        A dict with matching bounties or an error message.
+        A dict with matching engagements or an error message.
     """
     try:
         async with _client() as client:
-            result = await client.list_bounties(status="open", category=category)
-            bounties = result.bounties
+            result = await client.list_engagements(status="open", category=category)
+            engagements = result.engagements
             if min_reward is not None:
-                bounties = [b for b in bounties if b.reward_amount >= min_reward]
+                engagements = [b for b in engagements if b.reward_amount >= min_reward]
             return {
-                "total": len(bounties),
-                "bounties": [
+                "total": len(engagements),
+                "engagements": [
                     {
-                        "bounty_id": b.id,
+                        "engagement_id": b.id,
                         "title": b.title,
                         "description": b.description[:200],
                         "category": b.category,
@@ -399,7 +430,7 @@ async def tectonic_browse_bounties(
                         "deadline": b.deadline.isoformat(),
                         "acceptance_criteria": b.acceptance_criteria,
                     }
-                    for b in bounties
+                    for b in engagements
                 ],
             }
     except Exception as exc:
@@ -407,15 +438,15 @@ async def tectonic_browse_bounties(
 
 
 async def tectonic_submit_proposal(
-    bounty_id: str,
+    engagement_id: str,
     price: float,
     deadline: str,
     approach: str,
 ) -> dict:
-    """Submit a proposal for a bounty.
+    """Submit a proposal for an engagement.
 
     Args:
-        bounty_id: The bounty to bid on.
+        engagement_id: The engagement to bid on.
         price: Proposed price.
         deadline: Proposed deadline as ISO-8601 string.
         approach: Summary of the approach / plan.
@@ -426,7 +457,7 @@ async def tectonic_submit_proposal(
     try:
         async with _client() as client:
             proposal = await client.create_proposal(
-                bounty_id,
+                engagement_id,
                 ProposalCreate(
                     proposed_price=price,
                     proposed_deadline=_parse_deadline(deadline),
@@ -435,7 +466,7 @@ async def tectonic_submit_proposal(
             )
             return {
                 "proposal_id": proposal.id,
-                "bounty_id": proposal.bounty_id,
+                "engagement_id": proposal.engagement_id,
                 "status": proposal.status.value,
                 "proposed_price": proposal.proposed_price,
                 "proposed_deadline": proposal.proposed_deadline.isoformat(),

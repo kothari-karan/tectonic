@@ -13,49 +13,49 @@ from helpers import register_agent, auth_headers
 @pytest.mark.asyncio
 async def test_multi_turn_negotiation(client):
     """Full multi-turn negotiation with counter-offers."""
-    poster, poster_key = await register_agent(client, "NegPoster", "poster")
-    solver, solver_key = await register_agent(client, "NegSolver", "solver")
-    poster_h = await auth_headers(poster_key)
-    solver_h = await auth_headers(solver_key)
+    requester, requester_key = await register_agent(client, "NegRequester", "requester")
+    provider, provider_key = await register_agent(client, "NegProvider", "provider")
+    requester_h = await auth_headers(requester_key)
+    provider_h = await auth_headers(provider_key)
 
     deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
 
-    # Post bounty
+    # Post engagement
     resp = await client.post(
-        "/bounties",
+        "/engagements",
         json={
-            "title": "Negotiation test bounty",
+            "title": "Negotiation test engagement",
             "description": "Test negotiation",
             "acceptance_criteria": ["Pass tests"],
             "category": "development",
             "reward_amount": 0.1,
             "deadline": deadline,
         },
-        headers=poster_h,
+        headers=requester_h,
     )
-    bounty_id = resp.json()["id"]
+    engagement_id = resp.json()["id"]
 
     # Submit proposal
     resp = await client.post(
-        f"/bounties/{bounty_id}/proposals",
+        f"/engagements/{engagement_id}/proposals",
         json={
             "proposed_price": 0.08,
             "proposed_deadline": deadline,
             "approach_summary": "I can do this",
         },
-        headers=solver_h,
+        headers=provider_h,
     )
     proposal_id = resp.json()["id"]
 
     # Start negotiation
     resp = await client.post(
         "/negotiations",
-        json={"bounty_id": bounty_id, "proposal_id": proposal_id},
-        headers=poster_h,
+        json={"engagement_id": engagement_id, "proposal_id": proposal_id},
+        headers=requester_h,
     )
     neg_id = resp.json()["id"]
 
-    # Turn 0: Poster offers initial terms
+    # Turn 0: Requester offers initial terms
     terms_v1 = {
         "price": 0.1,
         "deadline": deadline,
@@ -66,12 +66,12 @@ async def test_multi_turn_negotiation(client):
     resp = await client.post(
         f"/negotiations/{neg_id}/turns",
         json={"turn_type": "offer", "proposed_terms": terms_v1, "message": "Here's my offer"},
-        headers=poster_h,
+        headers=requester_h,
     )
     assert resp.status_code == 201
     assert resp.json()["sequence"] == 0
 
-    # Turn 1: Solver counters
+    # Turn 1: Provider counters
     terms_v2 = {
         "price": 0.12,
         "deadline": deadline,
@@ -82,12 +82,12 @@ async def test_multi_turn_negotiation(client):
     resp = await client.post(
         f"/negotiations/{neg_id}/turns",
         json={"turn_type": "counter", "proposed_terms": terms_v2, "message": "I need more for extra scope"},
-        headers=solver_h,
+        headers=provider_h,
     )
     assert resp.status_code == 201
     assert resp.json()["sequence"] == 1
 
-    # Turn 2: Poster counters back
+    # Turn 2: Requester counters back
     terms_v3 = {
         "price": 0.11,
         "deadline": deadline,
@@ -98,16 +98,16 @@ async def test_multi_turn_negotiation(client):
     resp = await client.post(
         f"/negotiations/{neg_id}/turns",
         json={"turn_type": "counter", "proposed_terms": terms_v3, "message": "Meet in the middle?"},
-        headers=poster_h,
+        headers=requester_h,
     )
     assert resp.status_code == 201
     assert resp.json()["sequence"] == 2
 
-    # Turn 3: Solver accepts
+    # Turn 3: Provider accepts
     resp = await client.post(
         f"/negotiations/{neg_id}/turns",
         json={"turn_type": "accept", "message": "Deal!"},
-        headers=solver_h,
+        headers=provider_h,
     )
     assert resp.status_code == 201
     assert resp.json()["sequence"] == 3
@@ -130,43 +130,43 @@ async def test_multi_turn_negotiation(client):
 
 @pytest.mark.asyncio
 async def test_negotiation_rejection(client):
-    """Test that rejection reverts bounty to open."""
-    poster, poster_key = await register_agent(client, "RejectPoster", "poster")
-    solver, solver_key = await register_agent(client, "RejectSolver", "solver")
-    poster_h = await auth_headers(poster_key)
-    solver_h = await auth_headers(solver_key)
+    """Test that rejection reverts engagement to open."""
+    requester, requester_key = await register_agent(client, "RejectRequester", "requester")
+    provider, provider_key = await register_agent(client, "RejectProvider", "provider")
+    requester_h = await auth_headers(requester_key)
+    provider_h = await auth_headers(provider_key)
 
     deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
 
     resp = await client.post(
-        "/bounties",
+        "/engagements",
         json={
-            "title": "Rejection test bounty",
+            "title": "Rejection test engagement",
             "description": "Will be rejected",
             "acceptance_criteria": ["N/A"],
             "category": "development",
             "reward_amount": 0.05,
             "deadline": deadline,
         },
-        headers=poster_h,
+        headers=requester_h,
     )
-    bounty_id = resp.json()["id"]
+    engagement_id = resp.json()["id"]
 
     resp = await client.post(
-        f"/bounties/{bounty_id}/proposals",
+        f"/engagements/{engagement_id}/proposals",
         json={"proposed_price": 0.04, "proposed_deadline": deadline, "approach_summary": "Quick job"},
-        headers=solver_h,
+        headers=provider_h,
     )
     proposal_id = resp.json()["id"]
 
     resp = await client.post(
         "/negotiations",
-        json={"bounty_id": bounty_id, "proposal_id": proposal_id},
-        headers=poster_h,
+        json={"engagement_id": engagement_id, "proposal_id": proposal_id},
+        headers=requester_h,
     )
     neg_id = resp.json()["id"]
 
-    # Poster offers
+    # Requester offers
     resp = await client.post(
         f"/negotiations/{neg_id}/turns",
         json={
@@ -179,15 +179,15 @@ async def test_negotiation_rejection(client):
                 "revision_rounds": 1,
             },
         },
-        headers=poster_h,
+        headers=requester_h,
     )
     assert resp.status_code == 201
 
-    # Solver rejects
+    # Provider rejects
     resp = await client.post(
         f"/negotiations/{neg_id}/turns",
         json={"turn_type": "reject", "message": "Not worth my time"},
-        headers=solver_h,
+        headers=provider_h,
     )
     assert resp.status_code == 201
 
@@ -195,23 +195,23 @@ async def test_negotiation_rejection(client):
     resp = await client.get(f"/negotiations/{neg_id}")
     assert resp.json()["status"] == "rejected"
 
-    # Bounty back to open
-    resp = await client.get(f"/bounties/{bounty_id}")
+    # Engagement back to open
+    resp = await client.get(f"/engagements/{engagement_id}")
     assert resp.json()["status"] == "open"
 
 
 @pytest.mark.asyncio
 async def test_turn_alternation_enforced(client):
     """Test that the same agent cannot take two consecutive turns."""
-    poster, poster_key = await register_agent(client, "AltPoster", "poster")
-    solver, solver_key = await register_agent(client, "AltSolver", "solver")
-    poster_h = await auth_headers(poster_key)
-    solver_h = await auth_headers(solver_key)
+    requester, requester_key = await register_agent(client, "AltRequester", "requester")
+    provider, provider_key = await register_agent(client, "AltProvider", "provider")
+    requester_h = await auth_headers(requester_key)
+    provider_h = await auth_headers(provider_key)
 
     deadline = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
 
     resp = await client.post(
-        "/bounties",
+        "/engagements",
         json={
             "title": "Alternation test",
             "description": "Test turn alternation",
@@ -220,21 +220,21 @@ async def test_turn_alternation_enforced(client):
             "reward_amount": 0.01,
             "deadline": deadline,
         },
-        headers=poster_h,
+        headers=requester_h,
     )
-    bounty_id = resp.json()["id"]
+    engagement_id = resp.json()["id"]
 
     resp = await client.post(
-        f"/bounties/{bounty_id}/proposals",
+        f"/engagements/{engagement_id}/proposals",
         json={"proposed_price": 0.01, "proposed_deadline": deadline, "approach_summary": "Easy"},
-        headers=solver_h,
+        headers=provider_h,
     )
     proposal_id = resp.json()["id"]
 
     resp = await client.post(
         "/negotiations",
-        json={"bounty_id": bounty_id, "proposal_id": proposal_id},
-        headers=poster_h,
+        json={"engagement_id": engagement_id, "proposal_id": proposal_id},
+        headers=requester_h,
     )
     neg_id = resp.json()["id"]
 
@@ -246,18 +246,18 @@ async def test_turn_alternation_enforced(client):
         "revision_rounds": 1,
     }
 
-    # Poster makes first offer
+    # Requester makes first offer
     resp = await client.post(
         f"/negotiations/{neg_id}/turns",
         json={"turn_type": "offer", "proposed_terms": terms},
-        headers=poster_h,
+        headers=requester_h,
     )
     assert resp.status_code == 201
 
-    # Poster tries to go again — should fail
+    # Requester tries to go again — should fail
     resp = await client.post(
         f"/negotiations/{neg_id}/turns",
         json={"turn_type": "counter", "proposed_terms": terms},
-        headers=poster_h,
+        headers=requester_h,
     )
     assert resp.status_code == 400

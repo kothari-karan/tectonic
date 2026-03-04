@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.api_key import get_current_agent
 from app.database import get_db
 from app.models.agent import Agent
-from app.models.bounty import Bounty, BountyStatus
+from app.models.bounty import Engagement, EngagementStatus
 from app.models.negotiation import Negotiation, NegotiationStatus, NegotiationTurn
 from app.models.proposal import Proposal, ProposalStatus
 from app.schemas.negotiation import (
@@ -37,40 +37,40 @@ async def create_negotiation(
             detail="Proposal not found",
         )
 
-    if str(proposal.bounty_id) != str(negotiation_data.bounty_id):
+    if str(proposal.engagement_id) != str(negotiation_data.engagement_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Proposal does not belong to the specified bounty",
+            detail="Proposal does not belong to the specified engagement",
         )
 
-    # Validate bounty
-    bounty = await db.get(Bounty, negotiation_data.bounty_id)
-    if bounty is None:
+    # Validate engagement
+    engagement = await db.get(Engagement, negotiation_data.engagement_id)
+    if engagement is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Bounty not found",
+            detail="Engagement not found",
         )
 
-    # The poster should initiate the negotiation
-    if str(bounty.poster_id) != str(agent.id):
+    # The requester should initiate the negotiation
+    if str(engagement.requester_id) != str(agent.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the bounty poster can initiate a negotiation",
+            detail="Only the engagement requester can initiate a negotiation",
         )
 
     # Mark proposal as accepted
     proposal.status = ProposalStatus.accepted
 
-    # Update bounty status
-    bounty.status = BountyStatus.negotiating
-    bounty.solver_id = proposal.solver_id
-    bounty.updated_at = datetime.now(timezone.utc)
+    # Update engagement status
+    engagement.status = EngagementStatus.negotiating
+    engagement.provider_id = proposal.provider_id
+    engagement.updated_at = datetime.now(timezone.utc)
 
     negotiation = Negotiation(
-        bounty_id=negotiation_data.bounty_id,
+        engagement_id=negotiation_data.engagement_id,
         proposal_id=negotiation_data.proposal_id,
-        poster_id=bounty.poster_id,
-        solver_id=proposal.solver_id,
+        requester_id=engagement.requester_id,
+        provider_id=proposal.provider_id,
         status=NegotiationStatus.active,
         turn_count=0,
         max_turns=10,
@@ -83,10 +83,10 @@ async def create_negotiation(
 
     response = NegotiationResponse(
         id=negotiation.id,
-        bounty_id=negotiation.bounty_id,
+        engagement_id=negotiation.engagement_id,
         proposal_id=negotiation.proposal_id,
-        poster_id=negotiation.poster_id,
-        solver_id=negotiation.solver_id,
+        requester_id=negotiation.requester_id,
+        provider_id=negotiation.provider_id,
         status=negotiation.status.value if hasattr(negotiation.status, "value") else str(negotiation.status),
         current_terms=negotiation.current_terms,
         turn_count=negotiation.turn_count,
@@ -121,10 +121,10 @@ async def get_negotiation(
 
     response = NegotiationResponse(
         id=negotiation.id,
-        bounty_id=negotiation.bounty_id,
+        engagement_id=negotiation.engagement_id,
         proposal_id=negotiation.proposal_id,
-        poster_id=negotiation.poster_id,
-        solver_id=negotiation.solver_id,
+        requester_id=negotiation.requester_id,
+        provider_id=negotiation.provider_id,
         status=negotiation.status.value if hasattr(negotiation.status, "value") else str(negotiation.status),
         current_terms=negotiation.current_terms,
         turn_count=negotiation.turn_count,

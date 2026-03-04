@@ -5,9 +5,9 @@ import GlassCard from '@/components/GlassCard';
 import StatusBadge from '@/components/StatusBadge';
 import EthAmount from '@/components/EthAmount';
 import ReputationBadge from '@/components/ReputationBadge';
-import { useAgents, useBounties, useContracts, useNegotiations } from '@/lib/hooks';
+import { useAgents, useEngagements, useContracts, useNegotiations } from '@/lib/hooks';
 import {
-  mockBounties,
+  mockEngagements,
   mockContracts,
   mockNegotiations,
   mockAgents,
@@ -21,7 +21,7 @@ const eventTypeConfig: Record<
   string,
   { color: string; label: string }
 > = {
-  bounty_posted: { color: 'bg-blue-500', label: 'Bounty Posted' },
+  engagement_posted: { color: 'bg-blue-500', label: 'Engagement Posted' },
   proposal_submitted: { color: 'bg-purple-500', label: 'Proposal' },
   negotiation_started: { color: 'bg-amber-500', label: 'Negotiation' },
   contract_funded: { color: 'bg-cyan-500', label: 'Funded' },
@@ -49,7 +49,7 @@ function ActivityItem({ event }: { event: ActivityEvent }) {
           <span className="text-white/50 text-xs">{config.label}</span>
         </div>
         <p className="text-white/40 text-sm mt-0.5 truncate">
-          {event.bounty_title}
+          {event.engagement_title}
           {event.amount !== undefined && (
             <span className="ml-2">
               <EthAmount amount={event.amount} className="text-xs" />
@@ -70,17 +70,17 @@ function ActivityItem({ event }: { event: ActivityEvent }) {
 // ── Main Page ───────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
-  const { data: bounties } = useBounties();
+  const { data: engagements } = useEngagements();
   const { data: contracts } = useContracts();
   const { data: negotiations } = useNegotiations();
   const { data: agents } = useAgents();
 
-  const allBounties = bounties?.length ? bounties : mockBounties;
+  const allEngagements = engagements?.length ? engagements : mockEngagements;
   const allContracts = contracts?.length ? contracts : mockContracts;
   const allNegotiations = negotiations?.length ? negotiations : mockNegotiations;
   const allAgents = agents?.length ? agents : mockAgents;
 
-  const totalBounties = allBounties.length;
+  const totalEngagements = allEngagements.length;
   const activeNegotiations = allNegotiations.filter(
     (n) => n.status !== 'agreed' && n.status !== 'rejected'
   ).length;
@@ -105,8 +105,8 @@ export default function AdminDashboard() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <GlassCard>
-              <p className="text-white/40 text-sm mb-1">Total Bounties</p>
-              <p className="text-2xl font-bold text-white">{totalBounties}</p>
+              <p className="text-white/40 text-sm mb-1">Total Engagements</p>
+              <p className="text-2xl font-bold text-white">{totalEngagements}</p>
             </GlassCard>
             <GlassCard>
               <p className="text-white/40 text-sm mb-1">Active Negotiations</p>
@@ -144,14 +144,14 @@ export default function AdminDashboard() {
           ) : (
             <div className="space-y-4">
               {disputedContracts.map((contract) => {
-                const bounty = allBounties.find(
-                  (b) => b.id === contract.bounty_id
+                const engagement = allEngagements.find(
+                  (b) => b.id === contract.engagement_id
                 );
-                const poster = allAgents.find(
-                  (a) => a.id === contract.poster_id
+                const requester = allAgents.find(
+                  (a) => a.id === contract.requester_id
                 );
-                const solver = allAgents.find(
-                  (a) => a.id === contract.solver_id
+                const provider = allAgents.find(
+                  (a) => a.id === contract.provider_id
                 );
 
                 return (
@@ -159,19 +159,19 @@ export default function AdminDashboard() {
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div>
                         <h4 className="text-white font-medium">
-                          {bounty?.title ?? contract.bounty_id}
+                          {engagement?.title ?? contract.engagement_id}
                         </h4>
                         <div className="flex items-center gap-4 mt-2 text-sm text-white/40">
                           <span>
-                            Poster:{' '}
+                            Requester:{' '}
                             <span className="text-white/60">
-                              {poster?.name ?? 'Unknown'}
+                              {requester?.name ?? 'Unknown'}
                             </span>
                           </span>
                           <span>
-                            Solver:{' '}
+                            Provider:{' '}
                             <span className="text-white/60">
-                              {solver?.name ?? 'Unknown'}
+                              {provider?.name ?? 'Unknown'}
                             </span>
                           </span>
                         </div>
@@ -182,26 +182,26 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    {bounty?.deliverable_url && (
+                    {engagement?.deliverable_url && (
                       <div className="flex items-center gap-2 text-sm">
                         <span className="text-white/40">Deliverable:</span>
                         <a
-                          href={bounty.deliverable_url}
+                          href={engagement.deliverable_url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-accent hover:text-accent/80 transition-colors underline underline-offset-2"
                         >
-                          {bounty.deliverable_url}
+                          {engagement.deliverable_url}
                         </a>
                       </div>
                     )}
 
                     <div className="flex gap-2 mt-4">
                       <button className="px-4 py-1.5 rounded-xl bg-green-500/20 text-green-400 text-sm font-medium hover:bg-green-500/30 transition-colors">
-                        Resolve (Pay Solver)
+                        Resolve (Pay Provider)
                       </button>
                       <button className="px-4 py-1.5 rounded-xl bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition-colors">
-                        Resolve (Refund Poster)
+                        Resolve (Refund Requester)
                       </button>
                     </div>
                   </GlassCard>
@@ -270,10 +270,10 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center text-white/60 text-sm">
-                        {agent.bounties_posted}
+                        {agent.engagements_posted}
                       </td>
                       <td className="px-6 py-4 text-center text-white/60 text-sm">
-                        {agent.bounties_completed}
+                        {agent.engagements_completed}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">

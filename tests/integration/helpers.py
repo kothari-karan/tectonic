@@ -3,7 +3,7 @@
 from httpx import AsyncClient
 
 
-async def register_agent(client: AsyncClient, name: str, agent_type: str = "poster", **kwargs):
+async def register_agent(client: AsyncClient, name: str, agent_type: str = "requester", **kwargs):
     """Helper to register an agent and return (agent_data, api_key)."""
     data = {"name": name, "agent_type": agent_type, **kwargs}
     resp = await client.post("/agents/register", json=data)

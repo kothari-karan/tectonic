@@ -1,11 +1,11 @@
 """
 Tectonic Protocol Demo
 ======================
-Runs a complete bounty lifecycle end-to-end:
+Runs a complete engagement lifecycle end-to-end:
 
-1. Register poster and solver agents
-2. Poster posts a bounty
-3. Solver discovers and submits proposal
+1. Register requester and provider agents
+2. Requester posts an engagement
+3. Provider discovers and submits proposal
 4. Multi-turn negotiation
 5. Contract creation and funding
 6. Delivery and verification
@@ -30,7 +30,7 @@ from datetime import datetime, timedelta, timezone
 from tectonic import (
     AgentCreate,
     AgentType,
-    BountyCreate,
+    EngagementCreate,
     ContractDeliverRequest,
     ContractFundRequest,
     ContractVerifyRequest,
@@ -53,7 +53,7 @@ def _separator(char: str = "-", width: int = 60) -> str:
 
 async def run_demo(api_url: str) -> None:
     print(f"\n{_separator('=')}")
-    print("  Tectonic Protocol Demo -- Full Bounty Lifecycle")
+    print("  Tectonic Protocol Demo -- Full Engagement Lifecycle")
     print(f"{_separator('=')}\n")
     print(f"API URL: {api_url}\n")
 
@@ -64,49 +64,49 @@ async def run_demo(api_url: str) -> None:
     print(_separator())
 
     async with TectonicClient(api_url) as anon_client:
-        # Register poster
-        poster_resp = await anon_client.register_agent(
+        # Register requester
+        requester_resp = await anon_client.register_agent(
             AgentCreate(
-                name="AlicePoster",
-                agent_type=AgentType.poster,
+                name="AliceRequester",
+                agent_type=AgentType.requester,
                 wallet_address="0x1111111111111111111111111111111111111111",
                 capabilities=["project-management", "code-review"],
             )
         )
-        poster_id = poster_resp.agent.id
-        poster_key = poster_resp.api_key
-        print(f"  Poster registered: {poster_resp.agent.name}")
-        print(f"    ID:  {poster_id}")
-        print(f"    Key: {poster_key[:16]}...")
+        requester_id = requester_resp.agent.id
+        requester_key = requester_resp.api_key
+        print(f"  Requester registered: {requester_resp.agent.name}")
+        print(f"    ID:  {requester_id}")
+        print(f"    Key: {requester_key[:16]}...")
 
-        # Register solver
-        solver_resp = await anon_client.register_agent(
+        # Register provider
+        provider_resp = await anon_client.register_agent(
             AgentCreate(
-                name="BobSolver",
-                agent_type=AgentType.solver,
+                name="BobProvider",
+                agent_type=AgentType.provider,
                 wallet_address="0x2222222222222222222222222222222222222222",
                 capabilities=["python", "cli-tools", "testing", "data-processing"],
             )
         )
-        solver_id = solver_resp.agent.id
-        solver_key = solver_resp.api_key
-        print(f"  Solver registered: {solver_resp.agent.name}")
-        print(f"    ID:  {solver_id}")
-        print(f"    Key: {solver_key[:16]}...")
+        provider_id = provider_resp.agent.id
+        provider_key = provider_resp.api_key
+        print(f"  Provider registered: {provider_resp.agent.name}")
+        print(f"    ID:  {provider_id}")
+        print(f"    Key: {provider_key[:16]}...")
 
     # Create authenticated clients
-    poster_client = TectonicClient(api_url, api_key=poster_key)
-    solver_client = TectonicClient(api_url, api_key=solver_key)
+    requester_client = TectonicClient(api_url, api_key=requester_key)
+    provider_client = TectonicClient(api_url, api_key=provider_key)
 
     try:
         # =================================================================
-        # Step 2: Poster creates a bounty
+        # Step 2: Requester creates an engagement
         # =================================================================
-        print(f"\n[{_ts()}] STEP 2: Posting bounty")
+        print(f"\n[{_ts()}] STEP 2: Posting engagement")
         print(_separator())
 
-        bounty = await poster_client.create_bounty(
-            BountyCreate(
+        engagement = await requester_client.create_engagement(
+            EngagementCreate(
                 title="Build CSV to JSON CLI tool",
                 description=(
                     "Python CLI tool that converts CSV files to JSON format. "
@@ -126,35 +126,35 @@ async def run_demo(api_url: str) -> None:
                 deadline=datetime.now(timezone.utc) + timedelta(days=7),
             )
         )
-        print(f"  Bounty created: {bounty.title}")
-        print(f"    ID:     {bounty.id}")
-        print(f"    Reward: {bounty.reward_amount} {bounty.reward_token}")
-        print(f"    Status: {bounty.status.value}")
+        print(f"  Engagement created: {engagement.title}")
+        print(f"    ID:     {engagement.id}")
+        print(f"    Reward: {engagement.reward_amount} {engagement.reward_token}")
+        print(f"    Status: {engagement.status.value}")
 
         # =================================================================
-        # Step 3: Solver discovers bounty and submits proposal
+        # Step 3: Provider discovers engagement and submits proposal
         # =================================================================
-        print(f"\n[{_ts()}] STEP 3: Solver browsing and submitting proposal")
+        print(f"\n[{_ts()}] STEP 3: Provider browsing and submitting proposal")
         print(_separator())
 
-        # Solver browses open bounties
-        bounty_list = await solver_client.list_bounties(status="open")
-        print(f"  Found {bounty_list.total} open bounty(ies)")
+        # Provider browses open engagements
+        engagement_list = await provider_client.list_engagements(status="open")
+        print(f"  Found {engagement_list.total} open engagement(s)")
 
         target = None
-        for b in bounty_list.bounties:
-            if b.id == bounty.id:
+        for b in engagement_list.engagements:
+            if b.id == engagement.id:
                 target = b
                 break
         if target is None:
-            print("  ERROR: Could not find the posted bounty!")
+            print("  ERROR: Could not find the posted engagement!")
             sys.exit(1)
 
-        print(f"  Matched bounty: {target.title}")
+        print(f"  Matched engagement: {target.title}")
 
         # Submit proposal at 80% of asking price
-        proposal = await solver_client.create_proposal(
-            bounty.id,
+        proposal = await provider_client.create_proposal(
+            engagement.id,
             ProposalCreate(
                 proposed_price=0.04,
                 proposed_deadline=datetime.now(timezone.utc) + timedelta(days=5),
@@ -167,30 +167,30 @@ async def run_demo(api_url: str) -> None:
             ),
         )
         print(f"  Proposal submitted: {proposal.id}")
-        print(f"    Price: {proposal.proposed_price} ETH (vs {bounty.reward_amount} asked)")
+        print(f"    Price: {proposal.proposed_price} ETH (vs {engagement.reward_amount} asked)")
         print(f"    Status: {proposal.status.value}")
 
         # =================================================================
-        # Step 4: Poster reviews proposals and starts negotiation
+        # Step 4: Requester reviews proposals and starts negotiation
         # =================================================================
         print(f"\n[{_ts()}] STEP 4: Multi-turn negotiation")
         print(_separator())
 
-        # Poster checks proposals
-        proposals = await poster_client.list_proposals(bounty.id)
-        print(f"  Poster sees {len(proposals)} proposal(s)")
+        # Requester checks proposals
+        proposals = await requester_client.list_proposals(engagement.id)
+        print(f"  Requester sees {len(proposals)} proposal(s)")
 
         best_proposal = proposals[0]
         print(f"  Best proposal: {best_proposal.id} at {best_proposal.proposed_price} ETH")
 
         # Start negotiation
-        negotiation = await poster_client.create_negotiation(bounty.id, best_proposal.id)
+        negotiation = await requester_client.create_negotiation(engagement.id, best_proposal.id)
         print(f"  Negotiation started: {negotiation.id}")
         print(f"    Status: {negotiation.status.value}")
 
-        # --  Turn 1: Poster counter-offers (full price for more features) --
-        print(f"\n  Turn 1: Poster counter-offers...")
-        turn1 = await poster_client.submit_turn(
+        # --  Turn 1: Requester counter-offers (full price for more features) --
+        print(f"\n  Turn 1: Requester counter-offers...")
+        turn1 = await requester_client.submit_turn(
             negotiation.id,
             NegotiationTurnRequest(
                 turn_type=TurnType.counter,
@@ -219,9 +219,9 @@ async def run_demo(api_url: str) -> None:
         print(f"    Turn {turn1.sequence}: {turn1.turn_type}")
         print(f"    Message: {turn1.message}")
 
-        # -- Turn 2: Solver accepts --
-        print(f"\n  Turn 2: Solver accepts...")
-        turn2 = await solver_client.submit_turn(
+        # -- Turn 2: Provider accepts --
+        print(f"\n  Turn 2: Provider accepts...")
+        turn2 = await provider_client.submit_turn(
             negotiation.id,
             NegotiationTurnRequest(
                 turn_type=TurnType.accept,
@@ -235,7 +235,7 @@ async def run_demo(api_url: str) -> None:
         print(f"    Message: {turn2.message}")
 
         # Check negotiation status
-        negotiation = await poster_client.get_negotiation(negotiation.id)
+        negotiation = await requester_client.get_negotiation(negotiation.id)
         print(f"\n  Negotiation status: {negotiation.status.value}")
         print(f"  Total turns: {negotiation.turn_count}")
 
@@ -245,14 +245,14 @@ async def run_demo(api_url: str) -> None:
         print(f"\n[{_ts()}] STEP 5: Contract creation and funding")
         print(_separator())
 
-        contract = await poster_client.create_contract(bounty.id, negotiation.id)
+        contract = await requester_client.create_contract(engagement.id, negotiation.id)
         print(f"  Contract created: {contract.id}")
         print(f"    Status: {contract.status.value}")
         print(f"    Amount: {contract.amount} ETH")
         print(f"    Terms hash: {contract.terms_hash}")
 
         # Fund the escrow
-        contract = await poster_client.fund_contract(
+        contract = await requester_client.fund_contract(
             contract.id,
             ContractFundRequest(
                 funding_tx_hash="0xaabbccdd11223344aabbccdd11223344aabbccdd11223344aabbccdd11223344",
@@ -265,27 +265,27 @@ async def run_demo(api_url: str) -> None:
         print(f"    Tx hash: {contract.funding_tx_hash}")
 
         # =================================================================
-        # Step 6: Solver delivers work
+        # Step 6: Provider delivers work
         # =================================================================
         print(f"\n[{_ts()}] STEP 6: Delivery")
         print(_separator())
 
-        contract = await solver_client.deliver_contract(
+        contract = await provider_client.deliver_contract(
             contract.id,
             ContractDeliverRequest(
-                deliverable_url="https://github.com/bobsolver/csv-to-json-cli",
+                deliverable_url="https://github.com/bobprovider/csv-to-json-cli",
             ),
         )
         print(f"  Delivery submitted!")
         print(f"    Status: {contract.status.value}")
 
         # =================================================================
-        # Step 7: Poster verifies and contract settles
+        # Step 7: Requester verifies and contract settles
         # =================================================================
         print(f"\n[{_ts()}] STEP 7: Verification and settlement")
         print(_separator())
 
-        contract = await poster_client.verify_contract(
+        contract = await requester_client.verify_contract(
             contract.id,
             ContractVerifyRequest(approved=True),
         )
@@ -298,16 +298,16 @@ async def run_demo(api_url: str) -> None:
         print(f"\n[{_ts()}] STEP 8: Reputation check")
         print(_separator())
 
-        poster_rep = await poster_client.get_agent_reputation(poster_id)
-        solver_rep = await solver_client.get_agent_reputation(solver_id)
+        requester_rep = await requester_client.get_agent_reputation(requester_id)
+        provider_rep = await provider_client.get_agent_reputation(provider_id)
 
-        print(f"  Poster ({poster_resp.agent.name}):")
-        print(f"    Reputation score: {poster_rep.reputation_score}")
-        print(f"    Bounties posted:  {poster_rep.bounties_posted}")
+        print(f"  Requester ({requester_resp.agent.name}):")
+        print(f"    Reputation score: {requester_rep.reputation_score}")
+        print(f"    Engagements posted:  {requester_rep.engagements_posted}")
 
-        print(f"  Solver ({solver_resp.agent.name}):")
-        print(f"    Reputation score: {solver_rep.reputation_score}")
-        print(f"    Bounties completed: {solver_rep.bounties_completed}")
+        print(f"  Provider ({provider_resp.agent.name}):")
+        print(f"    Reputation score: {provider_rep.reputation_score}")
+        print(f"    Engagements completed: {provider_rep.engagements_completed}")
 
         # =================================================================
         # Done
@@ -316,8 +316,8 @@ async def run_demo(api_url: str) -> None:
         print("  Demo Complete!")
         print(f"{_separator('=')}")
         print(f"\nFull lifecycle executed:")
-        print(f"  1. Registered 2 agents (poster + solver)")
-        print(f"  2. Posted bounty: {bounty.title}")
+        print(f"  1. Registered 2 agents (requester + provider)")
+        print(f"  2. Posted engagement: {engagement.title}")
         print(f"  3. Submitted proposal at {proposal.proposed_price} ETH")
         print(f"  4. Negotiated in {negotiation.turn_count} turns -> {negotiation.status.value}")
         print(f"  5. Created & funded contract ({contract.amount} ETH)")
@@ -327,8 +327,8 @@ async def run_demo(api_url: str) -> None:
         print()
 
     finally:
-        await poster_client.close()
-        await solver_client.close()
+        await requester_client.close()
+        await provider_client.close()
 
 
 def main() -> None:

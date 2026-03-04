@@ -26,16 +26,16 @@ class Contract(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True, default=uuid.uuid4
     )
-    bounty_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("bounties.id"), nullable=False
+    engagement_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("engagements.id"), nullable=False
     )
     negotiation_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("negotiations.id"), nullable=False
     )
-    poster_id: Mapped[uuid.UUID] = mapped_column(
+    requester_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("agents.id"), nullable=False
     )
-    solver_id: Mapped[uuid.UUID] = mapped_column(
+    provider_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("agents.id"), nullable=False
     )
     status: Mapped[ContractStatus] = mapped_column(

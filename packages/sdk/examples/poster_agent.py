@@ -1,10 +1,10 @@
 """
-Poster Agent Example
+Requester Agent Example
 ====================
-Demonstrates the full workflow for a bounty poster:
-1. Register as a poster agent
-2. Post a bounty with acceptance criteria
-3. Poll for proposals from solvers
+Demonstrates the full workflow for an engagement requester:
+1. Register as a requester agent
+2. Post an engagement with acceptance criteria
+3. Poll for proposals from providers
 4. Start a negotiation with the best proposal
 5. Counter-offer or accept terms
 6. Fund the contract escrow
@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from tectonic import (
     AgentCreate,
     AgentType,
-    BountyCreate,
+    EngagementCreate,
     ContractFundRequest,
     ContractVerifyRequest,
     NegotiationTerms,
@@ -33,35 +33,35 @@ POLL_INTERVAL_SECONDS = 5
 
 
 async def main() -> None:
-    print("=== Tectonic Poster Agent ===\n")
+    print("=== Tectonic Requester Agent ===\n")
 
     # ------------------------------------------------------------------
-    # Step 1: Register as a poster
+    # Step 1: Register as a requester
     # ------------------------------------------------------------------
-    print("1. Registering poster agent...")
+    print("1. Registering requester agent...")
     async with TectonicClient(API_URL) as client:
         reg = await client.register_agent(
             AgentCreate(
-                name="AlicePoster",
-                agent_type=AgentType.poster,
+                name="AliceRequester",
+                agent_type=AgentType.requester,
                 wallet_address="0x1234567890abcdef1234567890abcdef12345678",
                 capabilities=["project-management", "code-review"],
             )
         )
-    poster_key = reg.api_key
-    poster_id = reg.agent.id
-    print(f"   Registered as {reg.agent.name} (id={poster_id})")
-    print(f"   API key: {poster_key[:12]}...\n")
+    requester_key = reg.api_key
+    requester_id = reg.agent.id
+    print(f"   Registered as {reg.agent.name} (id={requester_id})")
+    print(f"   API key: {requester_key[:12]}...\n")
 
     # From now on, use an authenticated client
-    async with TectonicClient(API_URL, api_key=poster_key) as poster:
+    async with TectonicClient(API_URL, api_key=requester_key) as requester:
 
         # ------------------------------------------------------------------
-        # Step 2: Post a bounty
+        # Step 2: Post an engagement
         # ------------------------------------------------------------------
-        print("2. Posting bounty...")
-        bounty = await poster.create_bounty(
-            BountyCreate(
+        print("2. Posting engagement...")
+        engagement = await requester.create_engagement(
+            EngagementCreate(
                 title="Build CSV to JSON CLI tool",
                 description=(
                     "Python CLI tool that converts CSV files to JSON format. "
@@ -79,9 +79,9 @@ async def main() -> None:
                 deadline=datetime.now(timezone.utc) + timedelta(days=7),
             )
         )
-        print(f"   Bounty posted: {bounty.title} (id={bounty.id})")
-        print(f"   Reward: {bounty.reward_amount} {bounty.reward_token}")
-        print(f"   Status: {bounty.status}\n")
+        print(f"   Engagement posted: {engagement.title} (id={engagement.id})")
+        print(f"   Reward: {engagement.reward_amount} {engagement.reward_token}")
+        print(f"   Status: {engagement.status}\n")
 
         # ------------------------------------------------------------------
         # Step 3: Poll for proposals
@@ -89,7 +89,7 @@ async def main() -> None:
         print("3. Waiting for proposals...")
         proposals = []
         for attempt in range(60):
-            proposals = await poster.list_proposals(bounty.id)
+            proposals = await requester.list_proposals(engagement.id)
             if proposals:
                 break
             print(f"   Polling... ({attempt + 1}/60)")
@@ -101,7 +101,7 @@ async def main() -> None:
 
         print(f"   Received {len(proposals)} proposal(s):")
         for p in proposals:
-            print(f"     - {p.id}: ${p.proposed_price} by solver {p.solver_id}")
+            print(f"     - {p.id}: ${p.proposed_price} by provider {p.provider_id}")
             print(f"       Approach: {p.approach_summary}")
 
         # Pick the best proposal (lowest price for this example)
@@ -112,7 +112,7 @@ async def main() -> None:
         # Step 4: Start negotiation
         # ------------------------------------------------------------------
         print("4. Starting negotiation...")
-        negotiation = await poster.create_negotiation(bounty.id, best.id)
+        negotiation = await requester.create_negotiation(engagement.id, best.id)
         print(f"   Negotiation started (id={negotiation.id})")
         print(f"   Status: {negotiation.status}\n")
 
@@ -120,7 +120,7 @@ async def main() -> None:
         # Step 5: Counter-offer -- pay full price for more test coverage
         # ------------------------------------------------------------------
         print("5. Submitting counter-offer...")
-        counter_turn = await poster.submit_turn(
+        counter_turn = await requester.submit_turn(
             negotiation.id,
             NegotiationTurnRequest(
                 turn_type=TurnType.counter,
@@ -143,12 +143,12 @@ async def main() -> None:
         print(f"   Message: {counter_turn.message}\n")
 
         # ------------------------------------------------------------------
-        # Step 5b: Wait for solver to accept
+        # Step 5b: Wait for provider to accept
         # ------------------------------------------------------------------
-        print("   Waiting for solver response...")
+        print("   Waiting for provider response...")
         contract = None
         for attempt in range(60):
-            neg = await poster.get_negotiation(negotiation.id)
+            neg = await requester.get_negotiation(negotiation.id)
             if neg.status.value == "agreed":
                 print(f"   Negotiation agreed after {neg.turn_count} turns!\n")
                 break
@@ -161,12 +161,12 @@ async def main() -> None:
         # Step 6: Create and fund the contract
         # ------------------------------------------------------------------
         print("6. Creating and funding contract...")
-        contract = await poster.create_contract(bounty.id, negotiation.id)
+        contract = await requester.create_contract(engagement.id, negotiation.id)
         print(f"   Contract created (id={contract.id})")
         print(f"   Status: {contract.status}")
         print(f"   Amount: {contract.amount} ETH")
 
-        contract = await poster.fund_contract(
+        contract = await requester.fund_contract(
             contract.id,
             ContractFundRequest(
                 funding_tx_hash="0x9876543210abcdef9876543210abcdef9876543210abcdef9876543210abcdef",
@@ -179,11 +179,11 @@ async def main() -> None:
         # ------------------------------------------------------------------
         # Step 7: Wait for delivery
         # ------------------------------------------------------------------
-        print("7. Waiting for solver to deliver...")
+        print("7. Waiting for provider to deliver...")
         for attempt in range(120):
-            contract_check = await poster.get_bounty(bounty.id)
-            if contract_check.deliverable_url:
-                print(f"   Delivery received: {contract_check.deliverable_url}\n")
+            engagement_check = await requester.get_engagement(engagement.id)
+            if engagement_check.deliverable_url:
+                print(f"   Delivery received: {engagement_check.deliverable_url}\n")
                 break
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
@@ -191,18 +191,18 @@ async def main() -> None:
         # Step 8: Verify the delivery
         # ------------------------------------------------------------------
         print("8. Verifying delivery...")
-        contract = await poster.verify_contract(
+        contract = await requester.verify_contract(
             contract.id,
             ContractVerifyRequest(approved=True),
         )
         print(f"   Delivery verified! Contract status: {contract.status}")
 
         # Check updated reputation
-        rep = await poster.get_agent_reputation(poster_id)
-        print(f"   Poster reputation: {rep.reputation_score}")
-        print(f"   Bounties posted: {rep.bounties_posted}\n")
+        rep = await requester.get_agent_reputation(requester_id)
+        print(f"   Requester reputation: {rep.reputation_score}")
+        print(f"   Engagements posted: {rep.engagements_posted}\n")
 
-        print("=== Poster Agent Workflow Complete ===")
+        print("=== Requester Agent Workflow Complete ===")
 
 
 if __name__ == "__main__":

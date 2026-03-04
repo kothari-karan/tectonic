@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.database import Base, get_db
 from app.auth.api_key import generate_api_key, hash_api_key
 from app.models.agent import Agent, AgentType
-from app.models.bounty import Bounty, BountyStatus
+from app.models.bounty import Engagement, EngagementStatus, EngagementType
 from app.models.proposal import Proposal, ProposalStatus
 from app.models.negotiation import Negotiation, NegotiationStatus
 from app.models.contract import Contract, ContractStatus
@@ -79,8 +79,8 @@ async def create_test_agent(
         api_key_hash=api_key_hashed,
         capabilities=capabilities or ["testing"],
         reputation_score=0.0,
-        bounties_posted=0,
-        bounties_completed=0,
+        engagements_posted=0,
+        engagements_completed=0,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
@@ -90,21 +90,23 @@ async def create_test_agent(
     return agent, api_key
 
 
-async def create_test_bounty(
+async def create_test_engagement(
     db: AsyncSession,
-    poster: Agent,
-    title: str = "Test Bounty",
-    description: str = "A test bounty description",
+    requester: Agent,
+    title: str = "Test Engagement",
+    description: str = "A test engagement description",
     category: str = "testing",
     reward_amount: float = 1.0,
-    status: BountyStatus = BountyStatus.open,
+    status: EngagementStatus = EngagementStatus.open,
     deadline: datetime | None = None,
-) -> Bounty:
-    """Create a test bounty."""
+    engagement_type: EngagementType = EngagementType.open,
+    target_provider_ids: list[str] | None = None,
+) -> Engagement:
+    """Create a test engagement."""
     if deadline is None:
         deadline = datetime.now(timezone.utc) + timedelta(days=7)
 
-    bounty = Bounty(
+    engagement = Engagement(
         id=uuid.uuid4(),
         title=title,
         description=description,
@@ -112,30 +114,32 @@ async def create_test_bounty(
         category=category,
         reward_amount=reward_amount,
         reward_token="ETH",
-        poster_id=poster.id,
+        requester_id=requester.id,
         status=status,
+        engagement_type=engagement_type,
+        target_provider_ids=target_provider_ids,
         deadline=deadline,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
-    db.add(bounty)
+    db.add(engagement)
     await db.flush()
-    await db.refresh(bounty)
-    return bounty
+    await db.refresh(engagement)
+    return engagement
 
 
 async def create_test_proposal(
     db: AsyncSession,
-    bounty: Bounty,
-    solver: Agent,
+    engagement: Engagement,
+    provider: Agent,
     proposed_price: float = 0.8,
     status: ProposalStatus = ProposalStatus.pending,
 ) -> Proposal:
     """Create a test proposal."""
     proposal = Proposal(
         id=uuid.uuid4(),
-        bounty_id=bounty.id,
-        solver_id=solver.id,
+        engagement_id=engagement.id,
+        provider_id=provider.id,
         status=status,
         proposed_price=proposed_price,
         proposed_deadline=datetime.now(timezone.utc) + timedelta(days=5),
@@ -150,10 +154,10 @@ async def create_test_proposal(
 
 async def create_test_negotiation(
     db: AsyncSession,
-    bounty: Bounty,
+    engagement: Engagement,
     proposal: Proposal,
-    poster: Agent,
-    solver: Agent,
+    requester: Agent,
+    provider: Agent,
     status: NegotiationStatus = NegotiationStatus.active,
     turn_count: int = 0,
     current_terms: dict | None = None,
@@ -161,10 +165,10 @@ async def create_test_negotiation(
     """Create a test negotiation."""
     negotiation = Negotiation(
         id=uuid.uuid4(),
-        bounty_id=bounty.id,
+        engagement_id=engagement.id,
         proposal_id=proposal.id,
-        poster_id=poster.id,
-        solver_id=solver.id,
+        requester_id=requester.id,
+        provider_id=provider.id,
         status=status,
         current_terms=current_terms,
         turn_count=turn_count,

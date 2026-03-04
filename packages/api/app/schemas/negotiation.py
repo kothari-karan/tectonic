@@ -14,7 +14,7 @@ class NegotiationTerms(BaseModel):
 
 
 class NegotiationCreate(BaseModel):
-    bounty_id: uuid.UUID
+    engagement_id: uuid.UUID
     proposal_id: uuid.UUID
 
 
@@ -39,10 +39,10 @@ class NegotiationTurnResponse(BaseModel):
 
 class NegotiationResponse(BaseModel):
     id: uuid.UUID
-    bounty_id: uuid.UUID
+    engagement_id: uuid.UUID
     proposal_id: uuid.UUID
-    poster_id: uuid.UUID
-    solver_id: uuid.UUID
+    requester_id: uuid.UUID
+    provider_id: uuid.UUID
     status: str
     current_terms: dict | None
     turn_count: int

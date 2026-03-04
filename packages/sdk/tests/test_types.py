@@ -10,11 +10,12 @@ from tectonic.types import (
     AgentCreate,
     AgentRegisterResponse,
     AgentType,
-    Bounty,
-    BountyCreate,
-    BountyListResponse,
-    BountyStatus,
-    BountyUpdate,
+    Engagement,
+    EngagementCreate,
+    EngagementListResponse,
+    EngagementStatus,
+    EngagementType,
+    EngagementUpdate,
     Contract,
     ContractDeliverRequest,
     ContractFundRequest,
@@ -42,14 +43,19 @@ NOW = datetime.now(timezone.utc)
 
 class TestEnums:
     def test_agent_type_values(self):
-        assert AgentType.poster.value == "poster"
-        assert AgentType.solver.value == "solver"
+        assert AgentType.requester.value == "requester"
+        assert AgentType.provider.value == "provider"
         assert AgentType.both.value == "both"
 
-    def test_bounty_status_values(self):
-        assert BountyStatus.open.value == "open"
-        assert BountyStatus.settled.value == "settled"
-        assert BountyStatus.disputed.value == "disputed"
+    def test_engagement_status_values(self):
+        assert EngagementStatus.open.value == "open"
+        assert EngagementStatus.settled.value == "settled"
+        assert EngagementStatus.disputed.value == "disputed"
+
+    def test_engagement_type_values(self):
+        assert EngagementType.open.value == "open"
+        assert EngagementType.direct.value == "direct"
+        assert EngagementType.invited.value == "invited"
 
     def test_proposal_status_values(self):
         assert ProposalStatus.pending.value == "pending"
@@ -86,17 +92,17 @@ class TestAgentCreate:
     def test_valid(self):
         obj = AgentCreate(
             name="Alice",
-            agent_type=AgentType.poster,
+            agent_type=AgentType.requester,
             wallet_address="0x123",
             capabilities=["dev"],
         )
         assert obj.name == "Alice"
-        assert obj.agent_type == AgentType.poster
+        assert obj.agent_type == AgentType.requester
         assert obj.wallet_address == "0x123"
         assert obj.capabilities == ["dev"]
 
     def test_defaults(self):
-        obj = AgentCreate(name="Bob", agent_type=AgentType.solver)
+        obj = AgentCreate(name="Bob", agent_type=AgentType.provider)
         assert obj.wallet_address is None
         assert obj.capabilities == []
 
@@ -109,16 +115,16 @@ class TestAgentCreate:
             AgentCreate(name="Alice", agent_type="invalid")  # type: ignore[arg-type]
 
     def test_serialization_round_trip(self):
-        obj = AgentCreate(name="Alice", agent_type=AgentType.poster)
+        obj = AgentCreate(name="Alice", agent_type=AgentType.requester)
         data = obj.model_dump(mode="json")
-        assert data["agent_type"] == "poster"
+        assert data["agent_type"] == "requester"
         restored = AgentCreate.model_validate(data)
         assert restored == obj
 
 
-class TestBountyCreate:
+class TestEngagementCreate:
     def test_valid(self):
-        obj = BountyCreate(
+        obj = EngagementCreate(
             title="Build CLI",
             description="A CLI tool",
             acceptance_criteria=["Works"],
@@ -127,9 +133,11 @@ class TestBountyCreate:
             deadline=NOW,
         )
         assert obj.reward_token == "ETH"
+        assert obj.engagement_type == EngagementType.open
+        assert obj.target_provider_ids == []
 
     def test_custom_reward_token(self):
-        obj = BountyCreate(
+        obj = EngagementCreate(
             title="Build CLI",
             description="A CLI tool",
             acceptance_criteria=["Works"],
@@ -140,9 +148,23 @@ class TestBountyCreate:
         )
         assert obj.reward_token == "USDC"
 
+    def test_engagement_type_and_target_providers(self):
+        obj = EngagementCreate(
+            title="Build CLI",
+            description="A CLI tool",
+            acceptance_criteria=["Works"],
+            category="development",
+            reward_amount=0.05,
+            deadline=NOW,
+            engagement_type=EngagementType.invited,
+            target_provider_ids=["provider-1", "provider-2"],
+        )
+        assert obj.engagement_type == EngagementType.invited
+        assert obj.target_provider_ids == ["provider-1", "provider-2"]
+
     def test_missing_title(self):
         with pytest.raises(ValidationError):
-            BountyCreate(
+            EngagementCreate(
                 description="A CLI tool",
                 acceptance_criteria=["Works"],
                 category="development",
@@ -151,18 +173,18 @@ class TestBountyCreate:
             )  # type: ignore[call-arg]
 
 
-class TestBountyUpdate:
+class TestEngagementUpdate:
     def test_all_none_defaults(self):
-        obj = BountyUpdate()
-        assert obj.solver_id is None
+        obj = EngagementUpdate()
+        assert obj.provider_id is None
         assert obj.status is None
         assert obj.deliverable_url is None
 
     def test_partial_update(self):
-        obj = BountyUpdate(status=BountyStatus.in_progress)
-        assert obj.status == BountyStatus.in_progress
+        obj = EngagementUpdate(status=EngagementStatus.in_progress)
+        assert obj.status == EngagementStatus.in_progress
         dumped = obj.model_dump(exclude_none=True)
-        assert "solver_id" not in dumped
+        assert "provider_id" not in dumped
 
 
 class TestProposalCreate:
@@ -263,37 +285,37 @@ class TestAgentResponse:
         agent = Agent(
             id="abc-123",
             name="Alice",
-            agent_type=AgentType.poster,
+            agent_type=AgentType.requester,
             wallet_address="0x1",
             capabilities=["dev"],
             reputation_score=4.5,
-            bounties_posted=10,
-            bounties_completed=5,
+            engagements_posted=10,
+            engagements_completed=5,
             created_at=NOW,
             updated_at=NOW,
         )
         assert agent.id == "abc-123"
-        assert agent.agent_type == AgentType.poster
+        assert agent.agent_type == AgentType.requester
 
     def test_defaults(self):
         agent = Agent(
             id="abc-123",
             name="Bob",
-            agent_type=AgentType.solver,
+            agent_type=AgentType.provider,
             created_at=NOW,
             updated_at=NOW,
         )
         assert agent.wallet_address is None
         assert agent.capabilities == []
         assert agent.reputation_score == 0.0
-        assert agent.bounties_posted == 0
-        assert agent.bounties_completed == 0
+        assert agent.engagements_posted == 0
+        assert agent.engagements_completed == 0
 
     def test_missing_id(self):
         with pytest.raises(ValidationError):
             Agent(
                 name="Bob",
-                agent_type=AgentType.solver,
+                agent_type=AgentType.provider,
                 created_at=NOW,
                 updated_at=NOW,
             )  # type: ignore[call-arg]
@@ -305,7 +327,7 @@ class TestAgentRegisterResponse:
             agent=Agent(
                 id="abc-123",
                 name="Alice",
-                agent_type=AgentType.poster,
+                agent_type=AgentType.requester,
                 created_at=NOW,
                 updated_at=NOW,
             ),
@@ -315,60 +337,66 @@ class TestAgentRegisterResponse:
         assert resp.agent.name == "Alice"
 
 
-class TestBountyResponse:
+class TestEngagementResponse:
     def test_valid(self):
-        bounty = Bounty(
-            id="b-1",
+        engagement = Engagement(
+            id="e-1",
             title="Build CLI",
             description="A tool",
             acceptance_criteria=["Works"],
             category="dev",
             reward_amount=0.05,
             reward_token="ETH",
-            poster_id="p-1",
-            status=BountyStatus.open,
+            requester_id="p-1",
+            status=EngagementStatus.open,
             deadline=NOW,
             created_at=NOW,
             updated_at=NOW,
         )
-        assert bounty.solver_id is None
-        assert bounty.escrow_address is None
+        assert engagement.provider_id is None
+        assert engagement.escrow_address is None
+        assert engagement.engagement_type == EngagementType.open
+        assert engagement.target_provider_ids == []
 
     def test_full(self):
-        bounty = Bounty(
-            id="b-1",
+        engagement = Engagement(
+            id="e-1",
             title="Build CLI",
             description="A tool",
             acceptance_criteria=["Works"],
             category="dev",
             reward_amount=0.05,
             reward_token="ETH",
-            poster_id="p-1",
-            solver_id="s-1",
-            status=BountyStatus.in_progress,
+            requester_id="p-1",
+            provider_id="s-1",
+            status=EngagementStatus.in_progress,
             deadline=NOW,
             escrow_address="0xescrow",
             deliverable_url="https://github.com/test",
+            engagement_type=EngagementType.direct,
+            target_provider_ids=["s-1"],
             created_at=NOW,
             updated_at=NOW,
         )
-        assert bounty.solver_id == "s-1"
-        assert bounty.escrow_address == "0xescrow"
+        assert engagement.provider_id == "s-1"
+        assert engagement.escrow_address == "0xescrow"
+        assert engagement.engagement_type == EngagementType.direct
+        assert engagement.target_provider_ids == ["s-1"]
 
 
-class TestBountyListResponse:
+class TestEngagementListResponse:
     def test_valid(self):
-        resp = BountyListResponse(
-            bounties=[
-                Bounty(
-                    id="b-1",
+        resp = EngagementListResponse(
+            engagements=[
+                Engagement(
+                    id="e-1",
                     title="Build CLI",
                     description="A tool",
                     acceptance_criteria=["Works"],
                     category="dev",
                     reward_amount=0.05,
-                    poster_id="p-1",
-                    status=BountyStatus.open,
+                    requester_id="p-1",
+                    status=EngagementStatus.open,
                     deadline=NOW,
                     created_at=NOW,
                     updated_at=NOW,
@@ -377,10 +405,10 @@ class TestBountyListResponse:
             total=1,
         )
         assert resp.total == 1
-        assert len(resp.bounties) == 1
+        assert len(resp.engagements) == 1
 
     def test_empty(self):
-        resp = BountyListResponse(bounties=[], total=0)
+        resp = EngagementListResponse(engagements=[], total=0)
         assert resp.total == 0
 
 
@@ -388,8 +416,8 @@ class TestProposalResponse:
     def test_valid(self):
         proposal = Proposal(
             id="pr-1",
-            bounty_id="b-1",
-            solver_id="s-1",
+            engagement_id="e-1",
+            provider_id="s-1",
             status=ProposalStatus.pending,
             proposed_price=0.04,
             proposed_deadline=NOW,
@@ -431,10 +459,10 @@ class TestNegotiationResponse:
     def test_valid(self):
         neg = Negotiation(
             id="n-1",
-            bounty_id="b-1",
+            engagement_id="e-1",
             proposal_id="pr-1",
-            poster_id="p-1",
-            solver_id="s-1",
+            requester_id="p-1",
+            provider_id="s-1",
             status=NegotiationStatus.active,
             created_at=NOW,
             updated_at=NOW,
@@ -454,10 +482,10 @@ class TestNegotiationResponse:
         )
         neg = Negotiation(
             id="n-1",
-            bounty_id="b-1",
+            engagement_id="e-1",
             proposal_id="pr-1",
-            poster_id="p-1",
-            solver_id="s-1",
+            requester_id="p-1",
+            provider_id="s-1",
             status=NegotiationStatus.active,
             turns=[turn],
             turn_count=1,
@@ -471,10 +499,10 @@ class TestContractResponse:
     def test_valid(self):
         contract = Contract(
             id="c-1",
-            bounty_id="b-1",
+            engagement_id="e-1",
             negotiation_id="n-1",
-            poster_id="p-1",
-            solver_id="s-1",
+            requester_id="p-1",
+            provider_id="s-1",
             status=ContractStatus.pending_funding,
             agreed_terms={"price": 0.05},
             terms_hash="0xhash",
@@ -489,10 +517,10 @@ class TestContractResponse:
     def test_funded(self):
         contract = Contract(
             id="c-1",
-            bounty_id="b-1",
+            engagement_id="e-1",
             negotiation_id="n-1",
-            poster_id="p-1",
-            solver_id="s-1",
+            requester_id="p-1",
+            provider_id="s-1",
             status=ContractStatus.funded,
             agreed_terms={"price": 0.05},
             terms_hash="0xhash",
@@ -510,9 +538,9 @@ class TestReputationSummary:
         rep = ReputationSummary(
             agent_id="a-1",
             reputation_score=4.5,
-            bounties_posted=10,
-            bounties_completed=8,
-            events=[{"event_type": "bounty_completed", "score_delta": 0.5}],
+            engagements_posted=10,
+            engagements_completed=8,
+            events=[{"event_type": "engagement_completed", "score_delta": 0.5}],
         )
         assert rep.reputation_score == 4.5
         assert len(rep.events) == 1
@@ -521,8 +549,8 @@ class TestReputationSummary:
         rep = ReputationSummary(
             agent_id="a-1",
             reputation_score=0.0,
-            bounties_posted=0,
-            bounties_completed=0,
+            engagements_posted=0,
+            engagements_completed=0,
         )
         assert rep.events == []
 
@@ -533,8 +561,8 @@ class TestReputationSummary:
 
 
 class TestJsonSerialization:
-    def test_bounty_create_json(self):
-        obj = BountyCreate(
+    def test_engagement_create_json(self):
+        obj = EngagementCreate(
             title="Build CLI",
             description="A tool",
             acceptance_criteria=["Works"],
@@ -544,7 +572,7 @@ class TestJsonSerialization:
         )
         data = obj.model_dump(mode="json")
         assert isinstance(data["deadline"], str)
-        restored = BountyCreate.model_validate(data)
+        restored = EngagementCreate.model_validate(data)
         assert restored.title == "Build CLI"
 
     def test_negotiation_terms_json(self):
@@ -564,15 +592,15 @@ class TestJsonSerialization:
         api_data = {
             "id": "550e8400-e29b-41d4-a716-446655440000",
             "name": "Alice",
-            "agent_type": "poster",
+            "agent_type": "requester",
             "wallet_address": None,
             "capabilities": [],
             "reputation_score": 0.0,
-            "bounties_posted": 0,
-            "bounties_completed": 0,
+            "engagements_posted": 0,
+            "engagements_completed": 0,
             "created_at": "2025-01-01T00:00:00Z",
             "updated_at": "2025-01-01T00:00:00Z",
         }
         agent = Agent.model_validate(api_data)
         assert agent.id == "550e8400-e29b-41d4-a716-446655440000"
-        assert agent.agent_type == AgentType.poster
+        assert agent.agent_type == AgentType.requester
