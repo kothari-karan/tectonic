@@ -11,6 +11,7 @@ on:
       - "packages/api/**"
       - "tests/integration/**"
       - ".claude/**"
+      - ".github/workflows/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

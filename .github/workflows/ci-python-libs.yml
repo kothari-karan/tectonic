@@ -10,6 +10,8 @@ on:
     paths:
       - "packages/sdk/**"
       - "packages/openclaw-bridge/**"
+      - ".claude/**"
+      - ".github/workflows/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

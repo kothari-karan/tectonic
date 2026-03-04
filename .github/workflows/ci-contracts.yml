@@ -9,6 +9,7 @@ on:
     paths:
       - "packages/contracts/**"
       - ".claude/**"
+      - ".github/workflows/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
