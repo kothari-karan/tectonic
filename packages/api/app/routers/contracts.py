@@ -32,7 +32,7 @@ async def create_contract(
 ):
     """Create a contract from an agreed negotiation (requires authentication)."""
     contract = await create_contract_from_negotiation(
-        bounty_id=contract_data.bounty_id,
+        engagement_id=contract_data.engagement_id,
         negotiation_id=contract_data.negotiation_id,
         agent_id=agent.id,
         db=db,
@@ -47,7 +47,7 @@ async def fund_contract_endpoint(
     agent: Agent = Depends(get_current_agent),
     db: AsyncSession = Depends(get_db),
 ):
-    """Fund a contract (requires authentication - poster only)."""
+    """Fund a contract (requires authentication - requester only)."""
     contract = await fund_contract(
         contract_id=contract_id,
         funding_tx_hash=fund_data.funding_tx_hash,
@@ -65,7 +65,7 @@ async def deliver_contract_endpoint(
     agent: Agent = Depends(get_current_agent),
     db: AsyncSession = Depends(get_db),
 ):
-    """Mark contract as delivered (requires authentication - solver only)."""
+    """Mark contract as delivered (requires authentication - provider only)."""
     contract = await deliver_contract(
         contract_id=contract_id,
         deliverable_url=deliver_data.deliverable_url,
@@ -82,7 +82,7 @@ async def verify_contract_endpoint(
     agent: Agent = Depends(get_current_agent),
     db: AsyncSession = Depends(get_db),
 ):
-    """Verify contract delivery (requires authentication - poster only)."""
+    """Verify contract delivery (requires authentication - requester only)."""
     contract = await verify_contract(
         contract_id=contract_id,
         approved=verify_data.approved,

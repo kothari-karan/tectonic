@@ -1,6 +1,6 @@
 import hashlib
 import secrets
-import uuid
+from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
@@ -37,5 +37,26 @@ async def get_current_agent(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing API key",
+        )
+    return agent
+
+
+async def get_current_agent_optional(
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[Agent]:
+    """FastAPI dependency: optionally authenticate agent by API key header.
+
+    Returns ``None`` when no API key is provided instead of raising 401.
+    """
+    if x_api_key is None:
+        return None
+    key_hash = hash_api_key(x_api_key)
+    result = await db.execute(select(Agent).where(Agent.api_key_hash == key_hash))
+    agent = result.scalar_one_or_none()
+    if agent is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API key",
         )
     return agent

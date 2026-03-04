@@ -5,7 +5,7 @@ pragma solidity ^0.8.24;
  * @title TectonicEscrow
  * @notice Escrow contract for the Tectonic Agent Commerce Protocol.
  *         Handles creation, delivery, confirmation, disputes, and timeouts
- *         for agent-to-agent service agreements.
+ *         for agent-to-agent service engagements.
  */
 contract TectonicEscrow {
     // ---------------------------------------------------------------
@@ -23,8 +23,8 @@ contract TectonicEscrow {
     }
 
     struct Escrow {
-        address poster;
-        address solver;
+        address requester;
+        address provider;
         uint256 amount;
         bytes32 termsHash;
         uint256 deadline;
@@ -44,8 +44,8 @@ contract TectonicEscrow {
 
     event EscrowCreated(
         bytes32 indexed escrowId,
-        address indexed poster,
-        address indexed solver,
+        address indexed requester,
+        address indexed provider,
         uint256 amount,
         bytes32 termsHash,
         uint256 deadline
@@ -55,7 +55,7 @@ contract TectonicEscrow {
 
     event DeliveryConfirmed(
         bytes32 indexed escrowId,
-        address indexed solver,
+        address indexed provider,
         uint256 amount
     );
 
@@ -72,7 +72,7 @@ contract TectonicEscrow {
 
     event TimeoutClaimed(
         bytes32 indexed escrowId,
-        address indexed poster,
+        address indexed requester,
         uint256 amount
     );
 
@@ -90,42 +90,42 @@ contract TectonicEscrow {
 
     /**
      * @notice Create a new escrow and fund it with ETH.
-     * @param escrowId   Unique identifier for this escrow.
-     * @param solver     Address of the solver who will fulfil the task.
-     * @param termsHash  Keccak-256 hash of the off-chain terms document.
-     * @param deadline   Unix timestamp after which the poster may reclaim funds.
+     * @param escrowId    Unique identifier for this escrow.
+     * @param provider    Address of the provider who will fulfil the engagement.
+     * @param termsHash   Keccak-256 hash of the off-chain terms document.
+     * @param deadline    Unix timestamp after which the requester may reclaim funds.
      */
     function createAndFund(
         bytes32 escrowId,
-        address solver,
+        address provider,
         bytes32 termsHash,
         uint256 deadline
     ) external payable {
         require(escrows[escrowId].status == EscrowStatus.None, "Escrow already exists");
         require(msg.value > 0, "Must send ETH");
-        require(solver != address(0), "Solver cannot be zero address");
-        require(solver != msg.sender, "Solver cannot be poster");
+        require(provider != address(0), "Provider cannot be zero address");
+        require(provider != msg.sender, "Provider cannot be requester");
         require(deadline > block.timestamp, "Deadline must be in the future");
 
         escrows[escrowId] = Escrow({
-            poster: msg.sender,
-            solver: solver,
+            requester: msg.sender,
+            provider: provider,
             amount: msg.value,
             termsHash: termsHash,
             deadline: deadline,
             status: EscrowStatus.Funded
         });
 
-        emit EscrowCreated(escrowId, msg.sender, solver, msg.value, termsHash, deadline);
+        emit EscrowCreated(escrowId, msg.sender, provider, msg.value, termsHash, deadline);
     }
 
     /**
-     * @notice Solver marks the work as delivered.
+     * @notice Provider marks the work as delivered.
      * @param escrowId  The escrow to update.
      */
     function submitDelivery(bytes32 escrowId) external {
         Escrow storage e = escrows[escrowId];
-        require(msg.sender == e.solver, "Only solver can submit delivery");
+        require(msg.sender == e.provider, "Only provider can submit delivery");
         require(e.status == EscrowStatus.Funded, "Escrow not in Funded status");
 
         e.status = EscrowStatus.DeliverySubmitted;
@@ -134,20 +134,20 @@ contract TectonicEscrow {
     }
 
     /**
-     * @notice Poster confirms the delivery and releases funds to the solver.
+     * @notice Requester confirms the delivery and releases funds to the provider.
      * @param escrowId  The escrow to confirm.
      */
     function confirmDelivery(bytes32 escrowId) external {
         Escrow storage e = escrows[escrowId];
-        require(msg.sender == e.poster, "Only poster can confirm delivery");
+        require(msg.sender == e.requester, "Only requester can confirm delivery");
         require(e.status == EscrowStatus.DeliverySubmitted, "Escrow not in DeliverySubmitted status");
 
         e.status = EscrowStatus.Confirmed;
 
-        (bool success, ) = e.solver.call{value: e.amount}("");
-        require(success, "Transfer to solver failed");
+        (bool success, ) = e.provider.call{value: e.amount}("");
+        require(success, "Transfer to provider failed");
 
-        emit DeliveryConfirmed(escrowId, e.solver, e.amount);
+        emit DeliveryConfirmed(escrowId, e.provider, e.amount);
     }
 
     /**
@@ -157,8 +157,8 @@ contract TectonicEscrow {
     function raiseDispute(bytes32 escrowId) external {
         Escrow storage e = escrows[escrowId];
         require(
-            msg.sender == e.poster || msg.sender == e.solver,
-            "Only poster or solver can raise dispute"
+            msg.sender == e.requester || msg.sender == e.provider,
+            "Only requester or provider can raise dispute"
         );
         require(e.status == EscrowStatus.DeliverySubmitted, "Escrow not in DeliverySubmitted status");
 
@@ -178,8 +178,8 @@ contract TectonicEscrow {
         Escrow storage e = escrows[escrowId];
         require(e.status == EscrowStatus.Disputed, "Escrow not in Disputed status");
         require(
-            winner == e.poster || winner == e.solver,
-            "Winner must be poster or solver"
+            winner == e.requester || winner == e.provider,
+            "Winner must be requester or provider"
         );
 
         e.status = EscrowStatus.Resolved;
@@ -191,21 +191,21 @@ contract TectonicEscrow {
     }
 
     /**
-     * @notice Poster reclaims funds after the deadline if no delivery was submitted.
+     * @notice Requester reclaims funds after the deadline if no delivery was submitted.
      * @param escrowId  The escrow to reclaim.
      */
     function claimTimeout(bytes32 escrowId) external {
         Escrow storage e = escrows[escrowId];
-        require(msg.sender == e.poster, "Only poster can claim timeout");
+        require(msg.sender == e.requester, "Only requester can claim timeout");
         require(e.status == EscrowStatus.Funded, "Escrow not in Funded status");
         require(block.timestamp > e.deadline, "Deadline has not passed");
 
         e.status = EscrowStatus.TimedOut;
 
-        (bool success, ) = e.poster.call{value: e.amount}("");
-        require(success, "Transfer to poster failed");
+        (bool success, ) = e.requester.call{value: e.amount}("");
+        require(success, "Transfer to requester failed");
 
-        emit TimeoutClaimed(escrowId, e.poster, e.amount);
+        emit TimeoutClaimed(escrowId, e.requester, e.amount);
     }
 
     // ---------------------------------------------------------------

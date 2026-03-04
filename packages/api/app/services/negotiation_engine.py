@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.bounty import Bounty, BountyStatus
+from app.models.bounty import Engagement, EngagementStatus
 from app.models.negotiation import Negotiation, NegotiationStatus, NegotiationTurn, TurnType
 from app.schemas.negotiation import NegotiationTurnRequest
 
@@ -19,7 +19,7 @@ def validate_turn(
 
     Rules:
     - Negotiation must be active.
-    - It must be the agent's turn (poster goes on even turns, solver on odd turns).
+    - It must be the agent's turn (requester goes on even turns, provider on odd turns).
     - Turn type must be valid for the current state.
     - counter/offer must include proposed_terms.
     - accept must NOT include new terms.
@@ -33,27 +33,27 @@ def validate_turn(
         )
 
     # Check it's the agent's turn
-    # Poster starts (turn_count 0 = poster), then alternates
+    # Requester starts (turn_count 0 = requester), then alternates
     agent_id_str = str(agent_id)
-    poster_id_str = str(negotiation.poster_id)
-    solver_id_str = str(negotiation.solver_id)
+    requester_id_str = str(negotiation.requester_id)
+    provider_id_str = str(negotiation.provider_id)
 
-    if agent_id_str != poster_id_str and agent_id_str != solver_id_str:
+    if agent_id_str != requester_id_str and agent_id_str != provider_id_str:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a participant in this negotiation",
         )
 
-    is_poster_turn = negotiation.turn_count % 2 == 0
-    if is_poster_turn and agent_id_str != poster_id_str:
+    is_requester_turn = negotiation.turn_count % 2 == 0
+    if is_requester_turn and agent_id_str != requester_id_str:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="It is the poster's turn",
+            detail="It is the requester's turn",
         )
-    if not is_poster_turn and agent_id_str != solver_id_str:
+    if not is_requester_turn and agent_id_str != provider_id_str:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="It is the solver's turn",
+            detail="It is the provider's turn",
         )
 
     # Validate turn type
@@ -126,19 +126,19 @@ async def process_turn(
         negotiation.current_terms = terms_dict
     elif turn_request.turn_type == "accept":
         negotiation.status = NegotiationStatus.agreed
-        # Update the bounty status to agreed
-        bounty = await db.get(Bounty, negotiation.bounty_id)
-        if bounty:
-            bounty.status = BountyStatus.agreed
-            bounty.updated_at = datetime.now(timezone.utc)
+        # Update the engagement status to agreed
+        engagement = await db.get(Engagement, negotiation.engagement_id)
+        if engagement:
+            engagement.status = EngagementStatus.agreed
+            engagement.updated_at = datetime.now(timezone.utc)
     elif turn_request.turn_type == "reject":
         negotiation.status = NegotiationStatus.rejected
-        # Revert bounty to open
-        bounty = await db.get(Bounty, negotiation.bounty_id)
-        if bounty:
-            bounty.status = BountyStatus.open
-            bounty.solver_id = None
-            bounty.updated_at = datetime.now(timezone.utc)
+        # Revert engagement to open
+        engagement = await db.get(Engagement, negotiation.engagement_id)
+        if engagement:
+            engagement.status = EngagementStatus.open
+            engagement.provider_id = None
+            engagement.updated_at = datetime.now(timezone.utc)
 
     await db.flush()
     return turn

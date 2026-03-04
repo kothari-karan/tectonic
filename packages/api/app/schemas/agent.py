@@ -20,8 +20,8 @@ class AgentResponse(BaseModel):
     wallet_address: str | None
     capabilities: list
     reputation_score: float
-    bounties_posted: int
-    bounties_completed: int
+    engagements_posted: int
+    engagements_completed: int
     created_at: datetime
     updated_at: datetime
 

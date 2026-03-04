@@ -5,16 +5,16 @@ from pydantic import BaseModel, Field
 
 
 class ContractCreate(BaseModel):
-    bounty_id: uuid.UUID
+    engagement_id: uuid.UUID
     negotiation_id: uuid.UUID
 
 
 class ContractResponse(BaseModel):
     id: uuid.UUID
-    bounty_id: uuid.UUID
+    engagement_id: uuid.UUID
     negotiation_id: uuid.UUID
-    poster_id: uuid.UUID
-    solver_id: uuid.UUID
+    requester_id: uuid.UUID
+    provider_id: uuid.UUID
     status: str
     agreed_terms: dict
     terms_hash: str

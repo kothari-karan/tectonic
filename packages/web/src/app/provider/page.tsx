@@ -3,14 +3,14 @@
 import { useState, useMemo } from 'react';
 import Header from '@/components/Header';
 import GlassCard from '@/components/GlassCard';
-import BountyCard from '@/components/BountyCard';
+import EngagementCard from '@/components/EngagementCard';
 import StatusBadge from '@/components/StatusBadge';
 import EthAmount from '@/components/EthAmount';
 import ContractStatusTracker from '@/components/ContractStatusTracker';
 import NegotiationTimeline from '@/components/NegotiationTimeline';
-import { useBounties, useContracts, useNegotiations } from '@/lib/hooks';
+import { useEngagements, useContracts, useNegotiations } from '@/lib/hooks';
 import {
-  mockBounties,
+  mockEngagements,
   mockContracts,
   mockNegotiations,
   mockNegotiationTurns,
@@ -18,20 +18,20 @@ import {
   mockProposals,
 } from '@/lib/mock-data';
 
-const SOLVER_ID = 'agent-solver-001';
+const PROVIDER_ID = 'agent-provider-001';
 
-// ── Bounty Board with Filters ───────────────────────────────────────────────
+// ── Marketplace with Filters ───────────────────────────────────────────────
 
-function BountyBoard() {
-  const { data: allBounties } = useBounties();
+function Marketplace() {
+  const { data: allEngagements } = useEngagements();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [minReward, setMinReward] = useState('');
   const [maxReward, setMaxReward] = useState('');
 
-  const openBounties = useMemo(() => {
-    const bounties = allBounties?.length ? allBounties : mockBounties;
-    return bounties
+  const openEngagements = useMemo(() => {
+    const engagements = allEngagements?.length ? allEngagements : mockEngagements;
+    return engagements
       .filter((b) => b.status === 'open')
       .filter((b) =>
         search
@@ -46,12 +46,12 @@ function BountyBoard() {
       .filter((b) =>
         maxReward ? b.reward_amount <= parseFloat(maxReward) : true
       );
-  }, [allBounties, search, categoryFilter, minReward, maxReward]);
+  }, [allEngagements, search, categoryFilter, minReward, maxReward]);
 
   return (
     <section>
       <h2 className="text-lg font-semibold text-white/80 mb-4">
-        Bounty Board
+        Marketplace
       </h2>
 
       {/* Filters */}
@@ -62,7 +62,7 @@ function BountyBoard() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search bounties..."
+              placeholder="Search engagements..."
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-white/30 focus:outline-none focus:border-accent/50 transition-colors"
             />
           </div>
@@ -106,21 +106,21 @@ function BountyBoard() {
         </div>
       </GlassCard>
 
-      {openBounties.length === 0 ? (
+      {openEngagements.length === 0 ? (
         <GlassCard>
           <p className="text-white/40 text-center py-4">
-            No bounties match your filters.
+            No engagements match your filters.
           </p>
         </GlassCard>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {openBounties.map((bounty) => {
-            const poster = mockAgents.find((a) => a.id === bounty.poster_id);
+          {openEngagements.map((engagement) => {
+            const requester = mockAgents.find((a) => a.id === engagement.requester_id);
             return (
-              <BountyCard
-                key={bounty.id}
-                bounty={bounty}
-                posterReputation={poster?.reputation_score}
+              <EngagementCard
+                key={engagement.id}
+                engagement={engagement}
+                requesterReputation={requester?.reputation_score}
               />
             );
           })}
@@ -130,16 +130,16 @@ function BountyBoard() {
   );
 }
 
-// ── Negotiation Item (solver perspective) ───────────────────────────────────
+// ── Negotiation Item (provider perspective) ───────────────────────────────
 
-function SolverNegotiationItem({
+function ProviderNegotiationItem({
   negotiation,
 }: {
   negotiation: typeof mockNegotiations[0];
 }) {
   const [expanded, setExpanded] = useState(false);
-  const bounty = mockBounties.find((b) => b.id === negotiation.bounty_id);
-  const poster = mockAgents.find((a) => a.id === negotiation.poster_id);
+  const engagement = mockEngagements.find((b) => b.id === negotiation.engagement_id);
+  const requester = mockAgents.find((a) => a.id === negotiation.requester_id);
   const turns = mockNegotiationTurns.filter(
     (t) => t.negotiation_id === negotiation.id
   );
@@ -149,10 +149,10 @@ function SolverNegotiationItem({
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h4 className="text-white font-medium truncate">
-            {bounty?.title ?? negotiation.bounty_id}
+            {engagement?.title ?? negotiation.engagement_id}
           </h4>
           <p className="text-white/40 text-sm mt-0.5">
-            with {poster?.name ?? 'Unknown'} &middot; {negotiation.turn_count}{' '}
+            with {requester?.name ?? 'Unknown'} &middot; {negotiation.turn_count}{' '}
             turns
           </p>
         </div>
@@ -177,31 +177,31 @@ function SolverNegotiationItem({
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 
-export default function SolverDashboard() {
-  const { data: contracts } = useContracts({ solver_id: SOLVER_ID });
-  const { data: negotiations } = useNegotiations({ solver_id: SOLVER_ID });
+export default function ProviderDashboard() {
+  const { data: contracts } = useContracts({ provider_id: PROVIDER_ID });
+  const { data: negotiations } = useNegotiations({ provider_id: PROVIDER_ID });
 
-  const solverContracts = contracts?.length
-    ? contracts.filter((c) => c.solver_id === SOLVER_ID)
-    : mockContracts.filter((c) => c.solver_id === SOLVER_ID);
+  const providerContracts = contracts?.length
+    ? contracts.filter((c) => c.provider_id === PROVIDER_ID)
+    : mockContracts.filter((c) => c.provider_id === PROVIDER_ID);
 
-  const solverNegotiations = negotiations?.length
-    ? negotiations.filter((n) => n.solver_id === SOLVER_ID)
-    : mockNegotiations.filter((n) => n.solver_id === SOLVER_ID);
+  const providerNegotiations = negotiations?.length
+    ? negotiations.filter((n) => n.provider_id === PROVIDER_ID)
+    : mockNegotiations.filter((n) => n.provider_id === PROVIDER_ID);
 
-  const solverProposals = mockProposals.filter(
-    (p) => p.solver_id === SOLVER_ID
+  const providerProposals = mockProposals.filter(
+    (p) => p.provider_id === PROVIDER_ID
   );
 
-  const totalEarned = solverContracts
+  const totalEarned = providerContracts
     .filter((c) => c.status === 'settled')
     .reduce((sum, c) => sum + c.amount, 0);
 
-  const inEscrow = solverContracts
+  const inEscrow = providerContracts
     .filter((c) => c.status !== 'settled' && c.status !== 'cancelled')
     .reduce((sum, c) => sum + c.amount, 0);
 
-  const completedCount = solverContracts.filter(
+  const completedCount = providerContracts.filter(
     (c) => c.status === 'settled'
   ).length;
 
@@ -231,21 +231,21 @@ export default function SolverDashboard() {
               />
             </GlassCard>
             <GlassCard>
-              <p className="text-white/40 text-sm mb-1">Completed Bounties</p>
+              <p className="text-white/40 text-sm mb-1">Completed Engagements</p>
               <p className="text-2xl font-bold text-white">{completedCount}</p>
             </GlassCard>
           </div>
         </section>
 
-        {/* ── Bounty Board ──────────────────────────────────────── */}
-        <BountyBoard />
+        {/* ── Marketplace ──────────────────────────────────────── */}
+        <Marketplace />
 
         {/* ── My Proposals ──────────────────────────────────────── */}
         <section>
           <h2 className="text-lg font-semibold text-white/80 mb-4">
             My Proposals
           </h2>
-          {solverProposals.length === 0 ? (
+          {providerProposals.length === 0 ? (
             <GlassCard>
               <p className="text-white/40 text-center py-4">
                 No proposals submitted yet.
@@ -253,16 +253,16 @@ export default function SolverDashboard() {
             </GlassCard>
           ) : (
             <div className="space-y-3">
-              {solverProposals.map((proposal) => {
-                const bounty = mockBounties.find(
-                  (b) => b.id === proposal.bounty_id
+              {providerProposals.map((proposal) => {
+                const engagement = mockEngagements.find(
+                  (b) => b.id === proposal.engagement_id
                 );
                 return (
                   <GlassCard key={proposal.id}>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h4 className="text-white font-medium truncate">
-                          {bounty?.title ?? proposal.bounty_id}
+                          {engagement?.title ?? proposal.engagement_id}
                         </h4>
                         <p className="text-white/40 text-sm mt-0.5">
                           Proposed{' '}
@@ -290,7 +290,7 @@ export default function SolverDashboard() {
           <h2 className="text-lg font-semibold text-white/80 mb-4">
             Active Negotiations
           </h2>
-          {solverNegotiations.length === 0 ? (
+          {providerNegotiations.length === 0 ? (
             <GlassCard>
               <p className="text-white/40 text-center py-4">
                 No active negotiations.
@@ -298,8 +298,8 @@ export default function SolverDashboard() {
             </GlassCard>
           ) : (
             <div className="space-y-4">
-              {solverNegotiations.map((n) => (
-                <SolverNegotiationItem key={n.id} negotiation={n} />
+              {providerNegotiations.map((n) => (
+                <ProviderNegotiationItem key={n.id} negotiation={n} />
               ))}
             </div>
           )}
@@ -310,7 +310,7 @@ export default function SolverDashboard() {
           <h2 className="text-lg font-semibold text-white/80 mb-4">
             My Contracts
           </h2>
-          {solverContracts.length === 0 ? (
+          {providerContracts.length === 0 ? (
             <GlassCard>
               <p className="text-white/40 text-center py-4">
                 No contracts yet.
@@ -318,22 +318,22 @@ export default function SolverDashboard() {
             </GlassCard>
           ) : (
             <div className="space-y-4">
-              {solverContracts.map((contract) => {
-                const bounty = mockBounties.find(
-                  (b) => b.id === contract.bounty_id
+              {providerContracts.map((contract) => {
+                const engagement = mockEngagements.find(
+                  (b) => b.id === contract.engagement_id
                 );
-                const poster = mockAgents.find(
-                  (a) => a.id === contract.poster_id
+                const requester = mockAgents.find(
+                  (a) => a.id === contract.requester_id
                 );
                 return (
                   <GlassCard key={contract.id}>
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h4 className="text-white font-medium">
-                          {bounty?.title ?? contract.bounty_id}
+                          {engagement?.title ?? contract.engagement_id}
                         </h4>
                         <p className="text-white/40 text-sm mt-0.5">
-                          Poster: {poster?.name ?? 'Unknown'} &middot;{' '}
+                          Requester: {requester?.name ?? 'Unknown'} &middot;{' '}
                           <EthAmount amount={contract.amount} />
                         </p>
                       </div>

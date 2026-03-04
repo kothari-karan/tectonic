@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.bounty import BountyStatus
+from app.models.bounty import EngagementStatus
 from app.models.contract import Contract, ContractStatus
 from app.models.negotiation import NegotiationStatus
 from app.services.contract_service import (
@@ -18,7 +18,7 @@ from app.services.contract_service import (
 )
 from tests.conftest import (
     create_test_agent,
-    create_test_bounty,
+    create_test_engagement,
     create_test_negotiation,
     create_test_proposal,
 )
@@ -51,73 +51,73 @@ class TestComputeTermsHash:
 class TestCreateContractFromNegotiation:
     @pytest.mark.asyncio
     async def test_create_contract_success(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster1")
-        solver, _ = await create_test_agent(db_session, name="cs-solver1")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        requester, _ = await create_test_agent(db_session, name="cs-requester1")
+        provider, _ = await create_test_agent(db_session, name="cs-provider1")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         current_terms = {"price": 0.8, "deadline": "2099-01-01"}
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms=current_terms,
         )
 
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
 
         assert contract.status == ContractStatus.pending_funding
-        assert contract.poster_id == poster.id
-        assert contract.solver_id == solver.id
+        assert contract.requester_id == requester.id
+        assert contract.provider_id == provider.id
         assert contract.amount == 0.8
         assert contract.terms_hash.startswith("0x")
         assert contract.agreed_terms == current_terms
 
     @pytest.mark.asyncio
     async def test_create_contract_non_agreed_negotiation_fails(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster2")
-        solver, _ = await create_test_agent(db_session, name="cs-solver2")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        requester, _ = await create_test_agent(db_session, name="cs-requester2")
+        provider, _ = await create_test_agent(db_session, name="cs-provider2")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.active,
         )
 
         with pytest.raises(HTTPException) as exc_info:
             await create_contract_from_negotiation(
-                bounty.id, negotiation.id, poster.id, db_session,
+                engagement.id, negotiation.id, requester.id, db_session,
             )
         assert exc_info.value.status_code == 400
         assert "agreed" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_create_contract_nonexistent_negotiation(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster3")
-        bounty = await create_test_bounty(db_session, poster)
+        requester, _ = await create_test_agent(db_session, name="cs-requester3")
+        engagement = await create_test_engagement(db_session, requester)
 
         with pytest.raises(HTTPException) as exc_info:
             await create_contract_from_negotiation(
-                bounty.id, uuid.uuid4(), poster.id, db_session,
+                engagement.id, uuid.uuid4(), requester.id, db_session,
             )
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
     async def test_create_contract_non_party_fails(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster4")
-        solver, _ = await create_test_agent(db_session, name="cs-solver4")
+        requester, _ = await create_test_agent(db_session, name="cs-requester4")
+        provider, _ = await create_test_agent(db_session, name="cs-provider4")
         outsider, _ = await create_test_agent(db_session, name="cs-outsider4")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
 
         with pytest.raises(HTTPException) as exc_info:
             await create_contract_from_negotiation(
-                bounty.id, negotiation.id, outsider.id, db_session,
+                engagement.id, negotiation.id, outsider.id, db_session,
             )
         assert exc_info.value.status_code == 403
 
@@ -125,67 +125,67 @@ class TestCreateContractFromNegotiation:
 class TestFundContract:
     @pytest.mark.asyncio
     async def test_fund_contract_success(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster5")
-        solver, _ = await create_test_agent(db_session, name="cs-solver5")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        requester, _ = await create_test_agent(db_session, name="cs-requester5")
+        provider, _ = await create_test_agent(db_session, name="cs-provider5")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
 
         funded = await fund_contract(
-            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, poster.id, db_session,
+            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, requester.id, db_session,
         )
         assert funded.status == ContractStatus.funded
         assert funded.funding_tx_hash == "0x" + "a" * 64
 
     @pytest.mark.asyncio
-    async def test_fund_contract_by_solver_fails(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster6")
-        solver, _ = await create_test_agent(db_session, name="cs-solver6")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+    async def test_fund_contract_by_provider_fails(self, db_session: AsyncSession):
+        requester, _ = await create_test_agent(db_session, name="cs-requester6")
+        provider, _ = await create_test_agent(db_session, name="cs-provider6")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
 
         with pytest.raises(HTTPException) as exc_info:
             await fund_contract(
-                contract.id, "0x" + "a" * 64, "0x" + "b" * 40, solver.id, db_session,
+                contract.id, "0x" + "a" * 64, "0x" + "b" * 40, provider.id, db_session,
             )
         assert exc_info.value.status_code == 403
 
     @pytest.mark.asyncio
     async def test_fund_already_funded_contract_fails(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster7")
-        solver, _ = await create_test_agent(db_session, name="cs-solver7")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        requester, _ = await create_test_agent(db_session, name="cs-requester7")
+        provider, _ = await create_test_agent(db_session, name="cs-provider7")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
         await fund_contract(
-            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, poster.id, db_session,
+            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, requester.id, db_session,
         )
 
         with pytest.raises(HTTPException) as exc_info:
             await fund_contract(
-                contract.id, "0x" + "c" * 64, "0x" + "d" * 40, poster.id, db_session,
+                contract.id, "0x" + "c" * 64, "0x" + "d" * 40, requester.id, db_session,
             )
         assert exc_info.value.status_code == 400
 
@@ -193,48 +193,48 @@ class TestFundContract:
 class TestDeliverContract:
     @pytest.mark.asyncio
     async def test_deliver_contract_success(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster8")
-        solver, _ = await create_test_agent(db_session, name="cs-solver8")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        requester, _ = await create_test_agent(db_session, name="cs-requester8")
+        provider, _ = await create_test_agent(db_session, name="cs-provider8")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
         await fund_contract(
-            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, poster.id, db_session,
+            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, requester.id, db_session,
         )
 
         delivered = await deliver_contract(
-            contract.id, "https://example.com/result", solver.id, db_session,
+            contract.id, "https://example.com/result", provider.id, db_session,
         )
         assert delivered.status == ContractStatus.delivered
 
     @pytest.mark.asyncio
-    async def test_deliver_by_poster_fails(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster9")
-        solver, _ = await create_test_agent(db_session, name="cs-solver9")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+    async def test_deliver_by_requester_fails(self, db_session: AsyncSession):
+        requester, _ = await create_test_agent(db_session, name="cs-requester9")
+        provider, _ = await create_test_agent(db_session, name="cs-provider9")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
         await fund_contract(
-            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, poster.id, db_session,
+            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, requester.id, db_session,
         )
 
         with pytest.raises(HTTPException) as exc_info:
             await deliver_contract(
-                contract.id, "https://example.com/result", poster.id, db_session,
+                contract.id, "https://example.com/result", requester.id, db_session,
             )
         assert exc_info.value.status_code == 403
 
@@ -242,114 +242,114 @@ class TestDeliverContract:
 class TestVerifyContract:
     @pytest.mark.asyncio
     async def test_verify_approved_settles_contract(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster10")
-        solver, _ = await create_test_agent(db_session, name="cs-solver10")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        requester, _ = await create_test_agent(db_session, name="cs-requester10")
+        provider, _ = await create_test_agent(db_session, name="cs-provider10")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
         await fund_contract(
-            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, poster.id, db_session,
+            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, requester.id, db_session,
         )
         await deliver_contract(
-            contract.id, "https://example.com/result", solver.id, db_session,
+            contract.id, "https://example.com/result", provider.id, db_session,
         )
 
-        settled = await verify_contract(contract.id, True, poster.id, db_session)
+        settled = await verify_contract(contract.id, True, requester.id, db_session)
         assert settled.status == ContractStatus.settled
 
-        # Solver's bounties_completed should be incremented
-        await db_session.refresh(solver)
-        assert solver.bounties_completed == 1
+        # Provider's engagements_completed should be incremented
+        await db_session.refresh(provider)
+        assert provider.engagements_completed == 1
 
     @pytest.mark.asyncio
     async def test_verify_rejected_disputes_contract(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster11")
-        solver, _ = await create_test_agent(db_session, name="cs-solver11")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        requester, _ = await create_test_agent(db_session, name="cs-requester11")
+        provider, _ = await create_test_agent(db_session, name="cs-provider11")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
         await fund_contract(
-            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, poster.id, db_session,
+            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, requester.id, db_session,
         )
         await deliver_contract(
-            contract.id, "https://example.com/result", solver.id, db_session,
+            contract.id, "https://example.com/result", provider.id, db_session,
         )
 
-        disputed = await verify_contract(contract.id, False, poster.id, db_session)
+        disputed = await verify_contract(contract.id, False, requester.id, db_session)
         assert disputed.status == ContractStatus.disputed
 
 
 class TestDisputeContract:
     @pytest.mark.asyncio
-    async def test_dispute_by_poster(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster12")
-        solver, _ = await create_test_agent(db_session, name="cs-solver12")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+    async def test_dispute_by_requester(self, db_session: AsyncSession):
+        requester, _ = await create_test_agent(db_session, name="cs-requester12")
+        provider, _ = await create_test_agent(db_session, name="cs-provider12")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
         await fund_contract(
-            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, poster.id, db_session,
+            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, requester.id, db_session,
         )
 
-        disputed = await dispute_contract(contract.id, poster.id, db_session)
+        disputed = await dispute_contract(contract.id, requester.id, db_session)
         assert disputed.status == ContractStatus.disputed
 
     @pytest.mark.asyncio
-    async def test_dispute_by_solver(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster13")
-        solver, _ = await create_test_agent(db_session, name="cs-solver13")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+    async def test_dispute_by_provider(self, db_session: AsyncSession):
+        requester, _ = await create_test_agent(db_session, name="cs-requester13")
+        provider, _ = await create_test_agent(db_session, name="cs-provider13")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
         await fund_contract(
-            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, poster.id, db_session,
+            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, requester.id, db_session,
         )
 
-        disputed = await dispute_contract(contract.id, solver.id, db_session)
+        disputed = await dispute_contract(contract.id, provider.id, db_session)
         assert disputed.status == ContractStatus.disputed
 
     @pytest.mark.asyncio
     async def test_dispute_by_outsider_fails(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster14")
-        solver, _ = await create_test_agent(db_session, name="cs-solver14")
+        requester, _ = await create_test_agent(db_session, name="cs-requester14")
+        provider, _ = await create_test_agent(db_session, name="cs-provider14")
         outsider, _ = await create_test_agent(db_session, name="cs-outsider14")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
 
         with pytest.raises(HTTPException) as exc_info:
@@ -358,26 +358,26 @@ class TestDisputeContract:
 
     @pytest.mark.asyncio
     async def test_dispute_settled_contract_fails(self, db_session: AsyncSession):
-        poster, _ = await create_test_agent(db_session, name="cs-poster15")
-        solver, _ = await create_test_agent(db_session, name="cs-solver15")
-        bounty = await create_test_bounty(db_session, poster)
-        proposal = await create_test_proposal(db_session, bounty, solver)
+        requester, _ = await create_test_agent(db_session, name="cs-requester15")
+        provider, _ = await create_test_agent(db_session, name="cs-provider15")
+        engagement = await create_test_engagement(db_session, requester)
+        proposal = await create_test_proposal(db_session, engagement, provider)
         negotiation = await create_test_negotiation(
-            db_session, bounty, proposal, poster, solver,
+            db_session, engagement, proposal, requester, provider,
             status=NegotiationStatus.agreed,
             current_terms={"price": 1.0},
         )
         contract = await create_contract_from_negotiation(
-            bounty.id, negotiation.id, poster.id, db_session,
+            engagement.id, negotiation.id, requester.id, db_session,
         )
         await fund_contract(
-            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, poster.id, db_session,
+            contract.id, "0x" + "a" * 64, "0x" + "b" * 40, requester.id, db_session,
         )
         await deliver_contract(
-            contract.id, "https://example.com/result", solver.id, db_session,
+            contract.id, "https://example.com/result", provider.id, db_session,
         )
-        await verify_contract(contract.id, True, poster.id, db_session)
+        await verify_contract(contract.id, True, requester.id, db_session)
 
         with pytest.raises(HTTPException) as exc_info:
-            await dispute_contract(contract.id, poster.id, db_session)
+            await dispute_contract(contract.id, requester.id, db_session)
         assert exc_info.value.status_code == 400

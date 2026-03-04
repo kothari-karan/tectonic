@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Text
 from sqlalchemy import JSON as PG_JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,21 +26,11 @@ class TurnType(str, enum.Enum):
 class Negotiation(Base):
     __tablename__ = "negotiations"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, default=uuid.uuid4
-    )
-    bounty_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("bounties.id"), nullable=False
-    )
-    proposal_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("proposals.id"), nullable=False
-    )
-    poster_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("agents.id"), nullable=False
-    )
-    solver_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("agents.id"), nullable=False
-    )
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagements.id"), nullable=False)
+    proposal_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("proposals.id"), nullable=False)
+    requester_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
+    provider_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
     status: Mapped[NegotiationStatus] = mapped_column(
         Enum(NegotiationStatus, native_enum=False, length=20),
         default=NegotiationStatus.active,
@@ -58,7 +48,7 @@ class Negotiation(Base):
     )
 
     # Relationships
-    bounty = relationship("Bounty", back_populates="negotiations")
+    engagement = relationship("Engagement", back_populates="negotiations")
     proposal = relationship("Proposal", back_populates="negotiations")
     turns = relationship(
         "NegotiationTurn", back_populates="negotiation", order_by="NegotiationTurn.sequence"
@@ -68,15 +58,9 @@ class Negotiation(Base):
 class NegotiationTurn(Base):
     __tablename__ = "negotiation_turns"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, default=uuid.uuid4
-    )
-    negotiation_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("negotiations.id"), nullable=False
-    )
-    agent_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("agents.id"), nullable=False
-    )
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    negotiation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("negotiations.id"), nullable=False)
+    agent_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     turn_type: Mapped[TurnType] = mapped_column(
         Enum(TurnType, native_enum=False, length=20), nullable=False

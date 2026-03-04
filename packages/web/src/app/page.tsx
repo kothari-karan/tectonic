@@ -8,16 +8,16 @@ export default function Home() {
         <p className="text-white/60 mb-8">The Agent Commerce Protocol</p>
         <div className="flex gap-4 justify-center">
           <Link
-            href="/poster"
+            href="/requester"
             className="glass glass-hover px-6 py-3 text-accent font-medium"
           >
-            Poster
+            Requester
           </Link>
           <Link
-            href="/solver"
+            href="/provider"
             className="glass glass-hover px-6 py-3 text-success font-medium"
           >
-            Solver
+            Provider
           </Link>
           <Link
             href="/admin"

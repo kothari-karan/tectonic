@@ -9,11 +9,11 @@ export interface Agent {
   wallet_address: string;
   capabilities: string[];
   reputation_score: number;
-  bounties_posted: number;
-  bounties_completed: number;
+  engagements_posted: number;
+  engagements_completed: number;
 }
 
-export interface Bounty {
+export interface Engagement {
   id: string;
   title: string;
   description: string;
@@ -21,8 +21,8 @@ export interface Bounty {
   category: string;
   reward_amount: number;
   reward_token: string;
-  poster_id: string;
-  solver_id: string | null;
+  requester_id: string;
+  provider_id: string | null;
   status: string;
   deadline: string;
   escrow_address: string | null;
@@ -32,8 +32,8 @@ export interface Bounty {
 
 export interface Proposal {
   id: string;
-  bounty_id: string;
-  solver_id: string;
+  engagement_id: string;
+  provider_id: string;
   status: string;
   proposed_price: number;
   proposed_deadline: string;
@@ -43,9 +43,9 @@ export interface Proposal {
 
 export interface Negotiation {
   id: string;
-  bounty_id: string;
-  poster_id: string;
-  solver_id: string;
+  engagement_id: string;
+  requester_id: string;
+  provider_id: string;
   status: string;
   current_terms: Record<string, unknown>;
   turn_count: number;
@@ -66,9 +66,9 @@ export interface NegotiationTurn {
 
 export interface Contract {
   id: string;
-  bounty_id: string;
-  poster_id: string;
-  solver_id: string;
+  engagement_id: string;
+  requester_id: string;
+  provider_id: string;
   status: string;
   agreed_terms: Record<string, unknown>;
   amount: number;
@@ -113,16 +113,16 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ── API functions ───────────────────────────────────────────────────────────
 
-export interface BountyFilters {
+export interface EngagementFilters {
   status?: string;
   category?: string;
-  poster_id?: string;
-  solver_id?: string;
+  requester_id?: string;
+  provider_id?: string;
   min_reward?: number;
   max_reward?: number;
 }
 
-export async function fetchBounties(params?: BountyFilters): Promise<Bounty[]> {
+export async function fetchEngagements(params?: EngagementFilters): Promise<Engagement[]> {
   const searchParams = new URLSearchParams();
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -132,41 +132,41 @@ export async function fetchBounties(params?: BountyFilters): Promise<Bounty[]> {
     });
   }
   const query = searchParams.toString();
-  return apiFetch<Bounty[]>(`/bounties${query ? `?${query}` : ''}`);
+  return apiFetch<Engagement[]>(`/engagements${query ? `?${query}` : ''}`);
 }
 
-export async function fetchBounty(id: string): Promise<Bounty> {
-  return apiFetch<Bounty>(`/bounties/${id}`);
+export async function fetchEngagement(id: string): Promise<Engagement> {
+  return apiFetch<Engagement>(`/engagements/${id}`);
 }
 
-export async function createBounty(bounty: {
+export async function createEngagement(engagement: {
   title: string;
   description: string;
   acceptance_criteria: string[];
   category: string;
   reward_amount: number;
   reward_token?: string;
-  poster_id: string;
+  requester_id: string;
   deadline: string;
-}): Promise<Bounty> {
-  return apiFetch<Bounty>('/bounties', {
+}): Promise<Engagement> {
+  return apiFetch<Engagement>('/engagements', {
     method: 'POST',
-    body: JSON.stringify(bounty),
+    body: JSON.stringify(engagement),
   });
 }
 
-export async function fetchProposals(bountyId: string): Promise<Proposal[]> {
-  return apiFetch<Proposal[]>(`/bounties/${bountyId}/proposals`);
+export async function fetchProposals(engagementId: string): Promise<Proposal[]> {
+  return apiFetch<Proposal[]>(`/engagements/${engagementId}/proposals`);
 }
 
 export async function createProposal(proposal: {
-  bounty_id: string;
-  solver_id: string;
+  engagement_id: string;
+  provider_id: string;
   proposed_price: number;
   proposed_deadline: string;
   approach_summary: string;
 }): Promise<Proposal> {
-  return apiFetch<Proposal>(`/bounties/${proposal.bounty_id}/proposals`, {
+  return apiFetch<Proposal>(`/engagements/${proposal.engagement_id}/proposals`, {
     method: 'POST',
     body: JSON.stringify(proposal),
   });
@@ -177,8 +177,8 @@ export async function fetchNegotiation(id: string): Promise<Negotiation> {
 }
 
 export async function fetchNegotiations(params?: {
-  poster_id?: string;
-  solver_id?: string;
+  requester_id?: string;
+  provider_id?: string;
   status?: string;
 }): Promise<Negotiation[]> {
   const searchParams = new URLSearchParams();
@@ -204,8 +204,8 @@ export async function fetchContract(id: string): Promise<Contract> {
 }
 
 export async function fetchContracts(params?: {
-  poster_id?: string;
-  solver_id?: string;
+  requester_id?: string;
+  provider_id?: string;
   status?: string;
 }): Promise<Contract[]> {
   const searchParams = new URLSearchParams();

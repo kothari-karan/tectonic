@@ -1,6 +1,6 @@
 import type {
   Agent,
-  Bounty,
+  Engagement,
   Proposal,
   Negotiation,
   NegotiationTurn,
@@ -12,24 +12,24 @@ import type {
 
 export const mockAgents: Agent[] = [
   {
-    id: 'agent-poster-001',
+    id: 'agent-requester-001',
     name: 'AlphaBuilder',
-    agent_type: 'poster',
+    agent_type: 'requester',
     wallet_address: '0x1234567890abcdef1234567890abcdef12345678',
     capabilities: ['project-management', 'requirements-analysis', 'funding'],
     reputation_score: 82,
-    bounties_posted: 12,
-    bounties_completed: 0,
+    engagements_posted: 12,
+    engagements_completed: 0,
   },
   {
-    id: 'agent-solver-001',
+    id: 'agent-provider-001',
     name: 'CodeCraft',
-    agent_type: 'solver',
+    agent_type: 'provider',
     wallet_address: '0xabcdef1234567890abcdef1234567890abcdef12',
     capabilities: ['smart-contracts', 'solidity', 'auditing', 'rust'],
     reputation_score: 91,
-    bounties_posted: 0,
-    bounties_completed: 18,
+    engagements_posted: 0,
+    engagements_completed: 18,
   },
   {
     id: 'agent-admin-001',
@@ -38,16 +38,16 @@ export const mockAgents: Agent[] = [
     wallet_address: '0x9876543210fedcba9876543210fedcba98765432',
     capabilities: ['dispute-resolution', 'verification', 'governance'],
     reputation_score: 95,
-    bounties_posted: 2,
-    bounties_completed: 5,
+    engagements_posted: 2,
+    engagements_completed: 5,
   },
 ];
 
-// ── Bounties ────────────────────────────────────────────────────────────────
+// ── Engagements ────────────────────────────────────────────────────────────
 
-export const mockBounties: Bounty[] = [
+export const mockEngagements: Engagement[] = [
   {
-    id: 'bounty-001',
+    id: 'engagement-001',
     title: 'ERC-20 Token with Vesting Schedule',
     description:
       'Build an ERC-20 token contract with a linear vesting schedule for team allocations. Must include cliff period, revocable grants, and batch claim functionality.',
@@ -61,8 +61,8 @@ export const mockBounties: Bounty[] = [
     category: 'development',
     reward_amount: 2.5,
     reward_token: 'ETH',
-    poster_id: 'agent-poster-001',
-    solver_id: 'agent-solver-001',
+    requester_id: 'agent-requester-001',
+    provider_id: 'agent-provider-001',
     status: 'in_progress',
     deadline: '2026-03-20T00:00:00Z',
     escrow_address: '0xEscrow1111111111111111111111111111111111',
@@ -70,7 +70,7 @@ export const mockBounties: Bounty[] = [
     created_at: '2026-02-15T10:30:00Z',
   },
   {
-    id: 'bounty-002',
+    id: 'engagement-002',
     title: 'Multi-sig Wallet UI Design',
     description:
       'Design a modern, clean UI for a multi-signature wallet application. Must support dark mode, transaction queuing visualization, and signer management screens.',
@@ -84,8 +84,8 @@ export const mockBounties: Bounty[] = [
     category: 'design',
     reward_amount: 1.8,
     reward_token: 'ETH',
-    poster_id: 'agent-poster-001',
-    solver_id: null,
+    requester_id: 'agent-requester-001',
+    provider_id: null,
     status: 'open',
     deadline: '2026-04-01T00:00:00Z',
     escrow_address: null,
@@ -93,7 +93,7 @@ export const mockBounties: Bounty[] = [
     created_at: '2026-02-28T14:00:00Z',
   },
   {
-    id: 'bounty-003',
+    id: 'engagement-003',
     title: 'DeFi Protocol Risk Analysis Report',
     description:
       'Comprehensive risk analysis of the top 5 lending protocols on Ethereum. Must include smart contract risk, oracle risk, governance risk, and liquidity risk assessments.',
@@ -107,8 +107,8 @@ export const mockBounties: Bounty[] = [
     category: 'data',
     reward_amount: 3.2,
     reward_token: 'ETH',
-    poster_id: 'agent-poster-001',
-    solver_id: null,
+    requester_id: 'agent-requester-001',
+    provider_id: null,
     status: 'open',
     deadline: '2026-03-25T00:00:00Z',
     escrow_address: null,
@@ -116,7 +116,7 @@ export const mockBounties: Bounty[] = [
     created_at: '2026-03-01T09:15:00Z',
   },
   {
-    id: 'bounty-004',
+    id: 'engagement-004',
     title: 'Smart Contract Audit - NFT Marketplace',
     description:
       'Full security audit of an NFT marketplace contract including listing, bidding, and royalty distribution logic. Approximately 1200 lines of Solidity.',
@@ -130,8 +130,8 @@ export const mockBounties: Bounty[] = [
     category: 'development',
     reward_amount: 5.0,
     reward_token: 'ETH',
-    poster_id: 'agent-poster-001',
-    solver_id: 'agent-solver-001',
+    requester_id: 'agent-requester-001',
+    provider_id: 'agent-provider-001',
     status: 'settled',
     deadline: '2026-02-10T00:00:00Z',
     escrow_address: '0xEscrow2222222222222222222222222222222222',
@@ -139,7 +139,7 @@ export const mockBounties: Bounty[] = [
     created_at: '2026-01-15T08:00:00Z',
   },
   {
-    id: 'bounty-005',
+    id: 'engagement-005',
     title: 'Legal Framework for DAO Governance',
     description:
       'Draft a legal analysis on DAO governance structures and their compliance with US securities law. Include recommendations for legal wrappers.',
@@ -153,8 +153,8 @@ export const mockBounties: Bounty[] = [
     category: 'legal',
     reward_amount: 4.0,
     reward_token: 'ETH',
-    poster_id: 'agent-admin-001',
-    solver_id: null,
+    requester_id: 'agent-admin-001',
+    provider_id: null,
     status: 'disputed',
     deadline: '2026-03-15T00:00:00Z',
     escrow_address: '0xEscrow3333333333333333333333333333333333',
@@ -168,8 +168,8 @@ export const mockBounties: Bounty[] = [
 export const mockProposals: Proposal[] = [
   {
     id: 'proposal-001',
-    bounty_id: 'bounty-001',
-    solver_id: 'agent-solver-001',
+    engagement_id: 'engagement-001',
+    provider_id: 'agent-provider-001',
     status: 'accepted',
     proposed_price: 2.3,
     proposed_deadline: '2026-03-18T00:00:00Z',
@@ -179,8 +179,8 @@ export const mockProposals: Proposal[] = [
   },
   {
     id: 'proposal-002',
-    bounty_id: 'bounty-002',
-    solver_id: 'agent-solver-001',
+    engagement_id: 'engagement-002',
+    provider_id: 'agent-provider-001',
     status: 'pending',
     proposed_price: 1.5,
     proposed_deadline: '2026-03-28T00:00:00Z',
@@ -190,8 +190,8 @@ export const mockProposals: Proposal[] = [
   },
   {
     id: 'proposal-003',
-    bounty_id: 'bounty-003',
-    solver_id: 'agent-solver-001',
+    engagement_id: 'engagement-003',
+    provider_id: 'agent-provider-001',
     status: 'pending',
     proposed_price: 3.0,
     proposed_deadline: '2026-03-22T00:00:00Z',
@@ -206,9 +206,9 @@ export const mockProposals: Proposal[] = [
 export const mockNegotiations: Negotiation[] = [
   {
     id: 'negotiation-001',
-    bounty_id: 'bounty-001',
-    poster_id: 'agent-poster-001',
-    solver_id: 'agent-solver-001',
+    engagement_id: 'engagement-001',
+    requester_id: 'agent-requester-001',
+    provider_id: 'agent-provider-001',
     status: 'agreed',
     current_terms: {
       price: 2.5,
@@ -229,7 +229,7 @@ export const mockNegotiationTurns: NegotiationTurn[] = [
   {
     id: 'turn-001',
     negotiation_id: 'negotiation-001',
-    agent_id: 'agent-solver-001',
+    agent_id: 'agent-provider-001',
     agent_name: 'CodeCraft',
     sequence: 1,
     turn_type: 'propose',
@@ -249,7 +249,7 @@ export const mockNegotiationTurns: NegotiationTurn[] = [
   {
     id: 'turn-002',
     negotiation_id: 'negotiation-001',
-    agent_id: 'agent-poster-001',
+    agent_id: 'agent-requester-001',
     agent_name: 'AlphaBuilder',
     sequence: 2,
     turn_type: 'counter',
@@ -270,7 +270,7 @@ export const mockNegotiationTurns: NegotiationTurn[] = [
   {
     id: 'turn-003',
     negotiation_id: 'negotiation-001',
-    agent_id: 'agent-solver-001',
+    agent_id: 'agent-provider-001',
     agent_name: 'CodeCraft',
     sequence: 3,
     turn_type: 'counter',
@@ -291,7 +291,7 @@ export const mockNegotiationTurns: NegotiationTurn[] = [
   {
     id: 'turn-004',
     negotiation_id: 'negotiation-001',
-    agent_id: 'agent-poster-001',
+    agent_id: 'agent-requester-001',
     agent_name: 'AlphaBuilder',
     sequence: 4,
     turn_type: 'accept',
@@ -316,9 +316,9 @@ export const mockNegotiationTurns: NegotiationTurn[] = [
 export const mockContracts: Contract[] = [
   {
     id: 'contract-001',
-    bounty_id: 'bounty-001',
-    poster_id: 'agent-poster-001',
-    solver_id: 'agent-solver-001',
+    engagement_id: 'engagement-001',
+    requester_id: 'agent-requester-001',
+    provider_id: 'agent-provider-001',
     status: 'in_progress',
     agreed_terms: {
       price: 2.5,
@@ -339,9 +339,9 @@ export const mockContracts: Contract[] = [
   },
   {
     id: 'contract-002',
-    bounty_id: 'bounty-004',
-    poster_id: 'agent-poster-001',
-    solver_id: 'agent-solver-001',
+    engagement_id: 'engagement-004',
+    requester_id: 'agent-requester-001',
+    provider_id: 'agent-provider-001',
     status: 'settled',
     agreed_terms: {
       price: 5.0,
@@ -367,15 +367,15 @@ export const mockContracts: Contract[] = [
 export const mockReputationEvents: ReputationEvent[] = [
   {
     id: 'rep-001',
-    agent_id: 'agent-solver-001',
-    event_type: 'bounty_completed',
+    agent_id: 'agent-provider-001',
+    event_type: 'engagement_completed',
     score_change: 5,
     description: 'Completed NFT Marketplace audit on time',
     created_at: '2026-02-10T16:00:00Z',
   },
   {
     id: 'rep-002',
-    agent_id: 'agent-solver-001',
+    agent_id: 'agent-provider-001',
     event_type: 'positive_review',
     score_change: 3,
     description: 'Received 5-star rating from AlphaBuilder',
@@ -383,7 +383,7 @@ export const mockReputationEvents: ReputationEvent[] = [
   },
   {
     id: 'rep-003',
-    agent_id: 'agent-poster-001',
+    agent_id: 'agent-requester-001',
     event_type: 'prompt_payment',
     score_change: 2,
     description: 'Funded escrow within 1 hour of agreement',
@@ -391,10 +391,10 @@ export const mockReputationEvents: ReputationEvent[] = [
   },
   {
     id: 'rep-004',
-    agent_id: 'agent-poster-001',
-    event_type: 'bounty_posted',
+    agent_id: 'agent-requester-001',
+    event_type: 'engagement_posted',
     score_change: 1,
-    description: 'Posted new bounty: ERC-20 Token with Vesting Schedule',
+    description: 'Posted new engagement: ERC-20 Token with Vesting Schedule',
     created_at: '2026-02-15T10:30:00Z',
   },
 ];
@@ -406,7 +406,7 @@ export interface ActivityEvent {
   event_type: string;
   description: string;
   agent_name: string;
-  bounty_title?: string;
+  engagement_title?: string;
   amount?: number;
   created_at: string;
 }
@@ -414,10 +414,10 @@ export interface ActivityEvent {
 export const mockActivityFeed: ActivityEvent[] = [
   {
     id: 'activity-001',
-    event_type: 'bounty_posted',
-    description: 'New bounty posted',
+    event_type: 'engagement_posted',
+    description: 'New engagement posted',
     agent_name: 'AlphaBuilder',
-    bounty_title: 'DeFi Protocol Risk Analysis Report',
+    engagement_title: 'DeFi Protocol Risk Analysis Report',
     amount: 3.2,
     created_at: '2026-03-01T09:15:00Z',
   },
@@ -426,7 +426,7 @@ export const mockActivityFeed: ActivityEvent[] = [
     event_type: 'proposal_submitted',
     description: 'Proposal submitted',
     agent_name: 'CodeCraft',
-    bounty_title: 'Multi-sig Wallet UI Design',
+    engagement_title: 'Multi-sig Wallet UI Design',
     amount: 1.5,
     created_at: '2026-03-01T10:00:00Z',
   },
@@ -435,7 +435,7 @@ export const mockActivityFeed: ActivityEvent[] = [
     event_type: 'negotiation_started',
     description: 'Negotiation started',
     agent_name: 'CodeCraft',
-    bounty_title: 'ERC-20 Token with Vesting Schedule',
+    engagement_title: 'ERC-20 Token with Vesting Schedule',
     created_at: '2026-02-16T09:00:00Z',
   },
   {
@@ -443,7 +443,7 @@ export const mockActivityFeed: ActivityEvent[] = [
     event_type: 'contract_funded',
     description: 'Escrow funded',
     agent_name: 'AlphaBuilder',
-    bounty_title: 'ERC-20 Token with Vesting Schedule',
+    engagement_title: 'ERC-20 Token with Vesting Schedule',
     amount: 2.5,
     created_at: '2026-02-16T13:00:00Z',
   },
@@ -452,7 +452,7 @@ export const mockActivityFeed: ActivityEvent[] = [
     event_type: 'contract_settled',
     description: 'Contract settled and paid',
     agent_name: 'AlphaBuilder',
-    bounty_title: 'Smart Contract Audit - NFT Marketplace',
+    engagement_title: 'Smart Contract Audit - NFT Marketplace',
     amount: 5.0,
     created_at: '2026-02-10T16:00:00Z',
   },
@@ -461,7 +461,7 @@ export const mockActivityFeed: ActivityEvent[] = [
     event_type: 'dispute_opened',
     description: 'Dispute opened',
     agent_name: 'OverseerBot',
-    bounty_title: 'Legal Framework for DAO Governance',
+    engagement_title: 'Legal Framework for DAO Governance',
     amount: 4.0,
     created_at: '2026-03-02T14:30:00Z',
   },

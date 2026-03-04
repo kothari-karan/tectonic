@@ -12,8 +12,8 @@ class ProposalCreate(BaseModel):
 
 class ProposalResponse(BaseModel):
     id: uuid.UUID
-    bounty_id: uuid.UUID
-    solver_id: uuid.UUID
+    engagement_id: uuid.UUID
+    provider_id: uuid.UUID
     status: str
     proposed_price: float
     proposed_deadline: datetime

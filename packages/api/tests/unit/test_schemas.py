@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.schemas.agent import AgentCreate, AgentResponse
-from app.schemas.bounty import BountyCreate, BountyUpdate, BountyResponse
+from app.schemas.bounty import EngagementCreate, EngagementUpdate, EngagementResponse
 from app.schemas.proposal import ProposalCreate, ProposalResponse
 from app.schemas.negotiation import (
     NegotiationTerms,
@@ -22,9 +22,9 @@ from app.schemas.contract import (
 
 class TestAgentSchemas:
     def test_agent_create_valid(self):
-        data = AgentCreate(name="test", agent_type="poster")
+        data = AgentCreate(name="test", agent_type="requester")
         assert data.name == "test"
-        assert data.agent_type == "poster"
+        assert data.agent_type == "requester"
         assert data.wallet_address is None
         assert data.capabilities == []
 
@@ -40,7 +40,7 @@ class TestAgentSchemas:
 
     def test_agent_create_missing_name(self):
         with pytest.raises(ValidationError):
-            AgentCreate(agent_type="poster")
+            AgentCreate(agent_type="requester")
 
     def test_agent_create_missing_agent_type(self):
         with pytest.raises(ValidationError):
@@ -52,41 +52,41 @@ class TestAgentSchemas:
 
     def test_agent_create_empty_name(self):
         with pytest.raises(ValidationError):
-            AgentCreate(name="", agent_type="poster")
+            AgentCreate(name="", agent_type="requester")
 
     def test_agent_response_from_attributes(self):
         now = datetime.now(timezone.utc)
         data = AgentResponse(
             id=uuid.uuid4(),
             name="test",
-            agent_type="solver",
+            agent_type="provider",
             wallet_address=None,
             capabilities=[],
             reputation_score=0.0,
-            bounties_posted=0,
-            bounties_completed=0,
+            engagements_posted=0,
+            engagements_completed=0,
             created_at=now,
             updated_at=now,
         )
         assert data.name == "test"
 
 
-class TestBountySchemas:
-    def test_bounty_create_valid(self):
-        data = BountyCreate(
-            title="Test Bounty",
+class TestEngagementSchemas:
+    def test_engagement_create_valid(self):
+        data = EngagementCreate(
+            title="Test Engagement",
             description="Description",
             acceptance_criteria=["criterion 1"],
             category="ai",
             reward_amount=1.5,
             deadline=datetime.now(timezone.utc) + timedelta(days=7),
         )
-        assert data.title == "Test Bounty"
+        assert data.title == "Test Engagement"
         assert data.reward_token == "ETH"
 
-    def test_bounty_create_missing_title(self):
+    def test_engagement_create_missing_title(self):
         with pytest.raises(ValidationError):
-            BountyCreate(
+            EngagementCreate(
                 description="Description",
                 acceptance_criteria=["criterion 1"],
                 category="ai",
@@ -94,9 +94,9 @@ class TestBountySchemas:
                 deadline=datetime.now(timezone.utc) + timedelta(days=7),
             )
 
-    def test_bounty_create_empty_acceptance_criteria(self):
+    def test_engagement_create_empty_acceptance_criteria(self):
         with pytest.raises(ValidationError):
-            BountyCreate(
+            EngagementCreate(
                 title="Test",
                 description="Description",
                 acceptance_criteria=[],
@@ -105,9 +105,9 @@ class TestBountySchemas:
                 deadline=datetime.now(timezone.utc) + timedelta(days=7),
             )
 
-    def test_bounty_create_negative_reward(self):
+    def test_engagement_create_negative_reward(self):
         with pytest.raises(ValidationError):
-            BountyCreate(
+            EngagementCreate(
                 title="Test",
                 description="Description",
                 acceptance_criteria=["criterion"],
@@ -116,9 +116,9 @@ class TestBountySchemas:
                 deadline=datetime.now(timezone.utc) + timedelta(days=7),
             )
 
-    def test_bounty_create_zero_reward(self):
+    def test_engagement_create_zero_reward(self):
         with pytest.raises(ValidationError):
-            BountyCreate(
+            EngagementCreate(
                 title="Test",
                 description="Description",
                 acceptance_criteria=["criterion"],
@@ -127,19 +127,19 @@ class TestBountySchemas:
                 deadline=datetime.now(timezone.utc) + timedelta(days=7),
             )
 
-    def test_bounty_update_all_optional(self):
-        data = BountyUpdate()
-        assert data.solver_id is None
+    def test_engagement_update_all_optional(self):
+        data = EngagementUpdate()
+        assert data.provider_id is None
         assert data.status is None
         assert data.deliverable_url is None
 
-    def test_bounty_update_with_status(self):
-        data = BountyUpdate(status="cancelled")
+    def test_engagement_update_with_status(self):
+        data = EngagementUpdate(status="cancelled")
         assert data.status == "cancelled"
 
-    def test_bounty_update_invalid_status(self):
+    def test_engagement_update_invalid_status(self):
         with pytest.raises(ValidationError):
-            BountyUpdate(status="invalid_status")
+            EngagementUpdate(status="invalid_status")
 
 
 class TestProposalSchemas:
@@ -216,10 +216,10 @@ class TestNegotiationSchemas:
 
     def test_negotiation_create_valid(self):
         data = NegotiationCreate(
-            bounty_id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
             proposal_id=uuid.uuid4(),
         )
-        assert data.bounty_id is not None
+        assert data.engagement_id is not None
 
     def test_negotiation_turn_request_offer(self):
         data = NegotiationTurnRequest(
@@ -253,10 +253,10 @@ class TestNegotiationSchemas:
 class TestContractSchemas:
     def test_contract_create_valid(self):
         data = ContractCreate(
-            bounty_id=uuid.uuid4(),
+            engagement_id=uuid.uuid4(),
             negotiation_id=uuid.uuid4(),
         )
-        assert data.bounty_id is not None
+        assert data.engagement_id is not None
 
     def test_contract_fund_request_valid(self):
         data = ContractFundRequest(

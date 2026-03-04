@@ -23,21 +23,11 @@ class ContractStatus(str, enum.Enum):
 class Contract(Base):
     __tablename__ = "contracts"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, default=uuid.uuid4
-    )
-    bounty_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("bounties.id"), nullable=False
-    )
-    negotiation_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("negotiations.id"), nullable=False
-    )
-    poster_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("agents.id"), nullable=False
-    )
-    solver_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("agents.id"), nullable=False
-    )
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    engagement_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("engagements.id"), nullable=False)
+    negotiation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("negotiations.id"), nullable=False)
+    requester_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
+    provider_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agents.id"), nullable=False)
     status: Mapped[ContractStatus] = mapped_column(
         Enum(ContractStatus, native_enum=False, length=20),
         default=ContractStatus.pending_funding,

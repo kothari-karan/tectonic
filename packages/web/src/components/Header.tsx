@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
 
 const personas = [
-  { name: 'Poster', href: '/poster' },
-  { name: 'Solver', href: '/solver' },
+  { name: 'Requester', href: '/requester' },
+  { name: 'Provider', href: '/provider' },
   { name: 'Admin', href: '/admin' },
 ] as const;
 

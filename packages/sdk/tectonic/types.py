@@ -11,12 +11,12 @@ from pydantic import BaseModel, Field
 
 
 class AgentType(str, Enum):
-    poster = "poster"
-    solver = "solver"
+    requester = "requester"
+    provider = "provider"
     both = "both"
 
 
-class BountyStatus(str, Enum):
+class EngagementStatus(str, Enum):
     open = "open"
     proposed = "proposed"
     negotiating = "negotiating"
@@ -27,6 +27,12 @@ class BountyStatus(str, Enum):
     settled = "settled"
     cancelled = "cancelled"
     disputed = "disputed"
+
+
+class EngagementType(str, Enum):
+    open = "open"
+    direct = "direct"
+    invited = "invited"
 
 
 class ProposalStatus(str, Enum):
@@ -73,8 +79,8 @@ class AgentCreate(BaseModel):
     capabilities: list[str] = Field(default_factory=list)
 
 
-class BountyCreate(BaseModel):
-    """Request body for creating a new bounty."""
+class EngagementCreate(BaseModel):
+    """Request body for creating a new engagement."""
 
     title: str
     description: str
@@ -83,18 +89,20 @@ class BountyCreate(BaseModel):
     reward_amount: float
     reward_token: str = "ETH"
     deadline: datetime
+    engagement_type: EngagementType = EngagementType.open
+    target_provider_ids: list[str] = Field(default_factory=list)
 
 
-class BountyUpdate(BaseModel):
-    """Request body for updating a bounty."""
+class EngagementUpdate(BaseModel):
+    """Request body for updating an engagement."""
 
-    solver_id: Optional[str] = None
-    status: Optional[BountyStatus] = None
+    provider_id: Optional[str] = None
+    status: Optional[EngagementStatus] = None
     deliverable_url: Optional[str] = None
 
 
 class ProposalCreate(BaseModel):
-    """Request body for submitting a proposal on a bounty."""
+    """Request body for submitting a proposal on an engagement."""
 
     proposed_price: float
     proposed_deadline: datetime
@@ -150,8 +158,8 @@ class Agent(BaseModel):
     wallet_address: Optional[str] = None
     capabilities: list[str] = Field(default_factory=list)
     reputation_score: float = 0.0
-    bounties_posted: int = 0
-    bounties_completed: int = 0
+    engagements_posted: int = 0
+    engagements_completed: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -163,8 +171,8 @@ class AgentRegisterResponse(BaseModel):
     api_key: str
 
 
-class Bounty(BaseModel):
-    """Bounty response returned by the API."""
+class Engagement(BaseModel):
+    """Engagement response returned by the API."""
 
     id: str
     title: str
@@ -173,20 +181,22 @@ class Bounty(BaseModel):
     category: str
     reward_amount: float
     reward_token: str = "ETH"
-    poster_id: str
-    solver_id: Optional[str] = None
-    status: BountyStatus
+    requester_id: str
+    provider_id: Optional[str] = None
+    status: EngagementStatus
     deadline: datetime
     escrow_address: Optional[str] = None
     deliverable_url: Optional[str] = None
+    engagement_type: EngagementType = EngagementType.open
+    target_provider_ids: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
 
-class BountyListResponse(BaseModel):
-    """Response for listing bounties, with pagination total."""
+class EngagementListResponse(BaseModel):
+    """Response for listing engagements, with pagination total."""
 
-    bounties: list[Bounty]
+    engagements: list[Engagement]
     total: int
 
 
@@ -194,8 +204,8 @@ class Proposal(BaseModel):
     """Proposal response returned by the API."""
 
     id: str
-    bounty_id: str
-    solver_id: str
+    engagement_id: str
+    provider_id: str
     status: ProposalStatus
     proposed_price: float
     proposed_deadline: datetime
@@ -220,10 +230,10 @@ class Negotiation(BaseModel):
     """Negotiation response returned by the API."""
 
     id: str
-    bounty_id: str
+    engagement_id: str
     proposal_id: str
-    poster_id: str
-    solver_id: str
+    requester_id: str
+    provider_id: str
     status: NegotiationStatus
     current_terms: Optional[dict] = None
     turn_count: int = 0
@@ -237,10 +247,10 @@ class Contract(BaseModel):
     """Contract response returned by the API."""
 
     id: str
-    bounty_id: str
+    engagement_id: str
     negotiation_id: str
-    poster_id: str
-    solver_id: str
+    requester_id: str
+    provider_id: str
     status: ContractStatus
     agreed_terms: dict
     terms_hash: str
@@ -257,6 +267,152 @@ class ReputationSummary(BaseModel):
 
     agent_id: str
     reputation_score: float
-    bounties_posted: int
-    bounties_completed: int
+    engagements_posted: int
+    engagements_completed: int
     events: list[dict] = Field(default_factory=list)
+
+
+# --- Service Listing Models ---
+
+
+class RateType(str, Enum):
+    fixed = "fixed"
+    hourly = "hourly"
+    per_deliverable = "per_deliverable"
+
+
+class ListingAvailability(str, Enum):
+    available = "available"
+    busy = "busy"
+    unavailable = "unavailable"
+
+
+class ListingCreate(BaseModel):
+    """Request body for creating a service listing."""
+
+    title: str
+    description: str
+    capabilities: list[str]
+    rate_type: RateType
+    rate_range_min: float
+    rate_range_max: float
+    response_time_hours: int = 24
+
+
+class ListingUpdate(BaseModel):
+    """Request body for updating a service listing."""
+
+    title: Optional[str] = None
+    description: Optional[str] = None
+    capabilities: Optional[list[str]] = None
+    availability: Optional[ListingAvailability] = None
+    rate_range_min: Optional[float] = None
+    rate_range_max: Optional[float] = None
+    response_time_hours: Optional[int] = None
+
+
+class ServiceListing(BaseModel):
+    """Service listing response returned by the API."""
+
+    id: str
+    provider_id: str
+    title: str
+    description: str
+    capabilities: list[str] = Field(default_factory=list)
+    rate_type: RateType
+    rate_range_min: float
+    rate_range_max: float
+    availability: ListingAvailability
+    response_time_hours: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ListingListResponse(BaseModel):
+    """Response for listing service listings, with pagination total."""
+
+    listings: list[ServiceListing]
+    total: int
+
+
+# --- Standing Agreement Models ---
+
+
+class AgreementStatus(str, Enum):
+    active = "active"
+    paused = "paused"
+    terminated = "terminated"
+
+
+class AgreementRateType(str, Enum):
+    retainer_monthly = "retainer_monthly"
+    per_task = "per_task"
+    hourly = "hourly"
+
+
+class AgreementCreate(BaseModel):
+    """Request body for creating a standing agreement."""
+
+    provider_id: str
+    title: str
+    scope_description: str
+    rate_type: AgreementRateType
+    rate: float
+    max_tasks_per_period: Optional[int] = None
+    max_spend_per_period: Optional[float] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    agreed_terms: Optional[dict] = None
+
+
+class AgreementUpdate(BaseModel):
+    """Request body for updating a standing agreement."""
+
+    status: Optional[AgreementStatus] = None
+    max_tasks_per_period: Optional[int] = None
+    max_spend_per_period: Optional[float] = None
+    end_date: Optional[datetime] = None
+
+
+class AgreementTaskCreate(BaseModel):
+    """Request body for dispatching a task under an agreement."""
+
+    title: str
+    description: str
+    reward_amount: float
+
+
+class StandingAgreement(BaseModel):
+    """Standing agreement response returned by the API."""
+
+    id: str
+    requester_id: str
+    provider_id: str
+    title: str
+    scope_description: str
+    rate_type: AgreementRateType
+    rate: float
+    max_tasks_per_period: Optional[int] = None
+    max_spend_per_period: Optional[float] = None
+    start_date: datetime
+    end_date: Optional[datetime] = None
+    status: AgreementStatus
+    agreed_terms: Optional[dict] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class AgreementTask(BaseModel):
+    """Agreement task response returned by the API."""
+
+    id: str
+    agreement_id: str
+    engagement_id: str
+    created_at: datetime
+
+
+class AgreementListResponse(BaseModel):
+    """Response for listing standing agreements."""
+
+    agreements: list[StandingAgreement]
+    total: int

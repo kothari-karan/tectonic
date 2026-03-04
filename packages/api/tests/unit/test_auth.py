@@ -59,7 +59,7 @@ class TestAPIKeyMiddleware:
     @pytest.mark.asyncio
     async def test_request_without_api_key_returns_422(self, client: AsyncClient):
         """Request without X-API-Key header should fail with 422 (missing header)."""
-        response = await client.post("/bounties", json={
+        response = await client.post("/engagements", json={
             "title": "Test",
             "description": "Test desc",
             "acceptance_criteria": ["criterion"],
@@ -73,7 +73,7 @@ class TestAPIKeyMiddleware:
     async def test_request_with_invalid_api_key_returns_401(self, client: AsyncClient):
         """Request with invalid X-API-Key should return 401."""
         response = await client.post(
-            "/bounties",
+            "/engagements",
             json={
                 "title": "Test",
                 "description": "Test desc",
@@ -93,9 +93,9 @@ class TestAPIKeyMiddleware:
         await db_session.commit()
 
         response = await client.post(
-            "/bounties",
+            "/engagements",
             json={
-                "title": "Test Bounty",
+                "title": "Test Engagement",
                 "description": "Test description",
                 "acceptance_criteria": ["criterion"],
                 "category": "test",

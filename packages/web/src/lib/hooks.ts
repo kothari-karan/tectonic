@@ -2,8 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import {
-  fetchBounties,
-  fetchBounty,
+  fetchEngagements,
+  fetchEngagement,
   fetchProposals,
   fetchNegotiation,
   fetchNegotiations,
@@ -13,8 +13,8 @@ import {
   fetchAgent,
   fetchAgents,
   fetchAgentReputation,
-  type BountyFilters,
-  type Bounty,
+  type EngagementFilters,
+  type Engagement,
   type Proposal,
   type Negotiation,
   type NegotiationTurn,
@@ -23,7 +23,7 @@ import {
   type AgentReputation,
 } from './api';
 import {
-  mockBounties,
+  mockEngagements,
   mockProposals,
   mockNegotiations,
   mockNegotiationTurns,
@@ -44,40 +44,40 @@ function withFallback<T>(fetcher: () => Promise<T>, fallback: T) {
   };
 }
 
-// ── Bounties ────────────────────────────────────────────────────────────────
+// ── Engagements ────────────────────────────────────────────────────────────
 
-export function useBounties(filters?: BountyFilters) {
-  return useQuery<Bounty[]>({
-    queryKey: ['bounties', filters],
-    queryFn: withFallback(() => fetchBounties(filters), mockBounties),
+export function useEngagements(filters?: EngagementFilters) {
+  return useQuery<Engagement[]>({
+    queryKey: ['engagements', filters],
+    queryFn: withFallback(() => fetchEngagements(filters), mockEngagements),
   });
 }
 
-export function useBounty(id: string) {
-  return useQuery<Bounty | undefined>({
-    queryKey: ['bounty', id],
+export function useEngagement(id: string) {
+  return useQuery<Engagement | undefined>({
+    queryKey: ['engagement', id],
     queryFn: withFallback(
-      () => fetchBounty(id),
-      mockBounties.find((b) => b.id === id)
+      () => fetchEngagement(id),
+      mockEngagements.find((b) => b.id === id)
     ),
     enabled: !!id,
   });
 }
 
-// ── Proposals ───────────────────────────────────────────────────────────────
+// ── Proposals ───────────────────────────────────────────────────────────
 
-export function useProposals(bountyId: string) {
+export function useProposals(engagementId: string) {
   return useQuery<Proposal[]>({
-    queryKey: ['proposals', bountyId],
+    queryKey: ['proposals', engagementId],
     queryFn: withFallback(
-      () => fetchProposals(bountyId),
-      mockProposals.filter((p) => p.bounty_id === bountyId)
+      () => fetchProposals(engagementId),
+      mockProposals.filter((p) => p.engagement_id === engagementId)
     ),
-    enabled: !!bountyId,
+    enabled: !!engagementId,
   });
 }
 
-// ── Negotiations ────────────────────────────────────────────────────────────
+// ── Negotiations ────────────────────────────────────────────────────────
 
 export function useNegotiation(id: string) {
   return useQuery<Negotiation | undefined>({
@@ -91,8 +91,8 @@ export function useNegotiation(id: string) {
 }
 
 export function useNegotiations(params?: {
-  poster_id?: string;
-  solver_id?: string;
+  requester_id?: string;
+  provider_id?: string;
   status?: string;
 }) {
   return useQuery<Negotiation[]>({
@@ -112,7 +112,7 @@ export function useNegotiationTurns(negotiationId: string) {
   });
 }
 
-// ── Contracts ───────────────────────────────────────────────────────────────
+// ── Contracts ───────────────────────────────────────────────────────────
 
 export function useContract(id: string) {
   return useQuery<Contract | undefined>({
@@ -126,8 +126,8 @@ export function useContract(id: string) {
 }
 
 export function useContracts(params?: {
-  poster_id?: string;
-  solver_id?: string;
+  requester_id?: string;
+  provider_id?: string;
   status?: string;
 }) {
   return useQuery<Contract[]>({
@@ -136,7 +136,7 @@ export function useContracts(params?: {
   });
 }
 
-// ── Agents ──────────────────────────────────────────────────────────────────
+// ── Agents ──────────────────────────────────────────────────────────────
 
 export function useAgent(id: string) {
   return useQuery<Agent | undefined>({

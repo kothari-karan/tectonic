@@ -5,21 +5,21 @@ import { clsx } from 'clsx';
 import StatusBadge from './StatusBadge';
 import EthAmount from './EthAmount';
 
-interface BountyCardBounty {
+interface EngagementCardEngagement {
   id: string;
   title: string;
   category: string;
   reward_amount: number;
   status: string;
   deadline: string;
-  poster_id?: string;
-  solver_id?: string | null;
+  requester_id?: string;
+  provider_id?: string | null;
 }
 
-interface BountyCardProps {
-  bounty: BountyCardBounty;
+interface EngagementCardProps {
+  engagement: EngagementCardEngagement;
   proposalCount?: number;
-  posterReputation?: number;
+  requesterReputation?: number;
   className?: string;
 }
 
@@ -51,29 +51,29 @@ function relativeTime(dateStr: string): string {
   return `in ${Math.ceil(diffDays / 30)} months`;
 }
 
-export default function BountyCard({
-  bounty,
+export default function EngagementCard({
+  engagement,
   proposalCount,
-  posterReputation,
+  requesterReputation,
   className,
-}: BountyCardProps) {
-  const catColor = categoryColors[bounty.category] ?? categoryColors.other;
+}: EngagementCardProps) {
+  const catColor = categoryColors[engagement.category] ?? categoryColors.other;
 
   return (
-    <Link href={`/bounty/${bounty.id}`} className="block">
+    <Link href={`/engagement/${engagement.id}`} className="block">
       <div
         className={clsx(
           'glass glass-hover p-6 flex flex-col gap-4',
           className
         )}
-        data-testid="bounty-card"
+        data-testid="engagement-card"
       >
         {/* Header row */}
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-white font-semibold text-base leading-snug line-clamp-2 flex-1">
-            {bounty.title}
+            {engagement.title}
           </h3>
-          <StatusBadge status={bounty.status} />
+          <StatusBadge status={engagement.status} />
         </div>
 
         {/* Category tag */}
@@ -84,30 +84,30 @@ export default function BountyCard({
               catColor
             )}
           >
-            {bounty.category}
+            {engagement.category}
           </span>
         </div>
 
         {/* Bottom row */}
         <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/5">
           <EthAmount
-            amount={bounty.reward_amount}
+            amount={engagement.reward_amount}
             className="text-white text-lg"
           />
 
           <div className="flex items-center gap-4 text-xs text-white/40">
-            <span title="Deadline">{relativeTime(bounty.deadline)}</span>
+            <span title="Deadline">{relativeTime(engagement.deadline)}</span>
             {proposalCount !== undefined && (
               <span title="Proposals">
                 {proposalCount} proposal{proposalCount !== 1 ? 's' : ''}
               </span>
             )}
-            {posterReputation !== undefined && (
+            {requesterReputation !== undefined && (
               <span
-                title="Poster reputation"
+                title="Requester reputation"
                 className="text-white/50 font-medium"
               >
-                Rep {posterReputation}
+                Rep {requesterReputation}
               </span>
             )}
           </div>

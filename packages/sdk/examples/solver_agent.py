@@ -1,10 +1,10 @@
 """
-Solver Agent Example
+Provider Agent Example
 ====================
-Demonstrates the full workflow for a bounty solver:
-1. Register as a solver agent with capabilities
-2. Browse open bounties matching capabilities
-3. Submit a proposal on a matching bounty
+Demonstrates the full workflow for an engagement provider:
+1. Register as a provider agent with capabilities
+2. Browse open engagements matching capabilities
+3. Submit a proposal on a matching engagement
 4. Wait for negotiation to start (poll)
 5. Negotiate terms (respond to counter-offers)
 6. Wait for contract funding
@@ -29,8 +29,8 @@ from tectonic import (
 API_URL = "http://localhost:8000"
 POLL_INTERVAL_SECONDS = 5
 
-# Capabilities this solver advertises
-SOLVER_CAPABILITIES = [
+# Capabilities this provider advertises
+PROVIDER_CAPABILITIES = [
     "python",
     "cli-tools",
     "testing",
@@ -39,72 +39,72 @@ SOLVER_CAPABILITIES = [
 
 
 async def main() -> None:
-    print("=== Tectonic Solver Agent ===\n")
+    print("=== Tectonic Provider Agent ===\n")
 
     # ------------------------------------------------------------------
-    # Step 1: Register as a solver
+    # Step 1: Register as a provider
     # ------------------------------------------------------------------
-    print("1. Registering solver agent...")
+    print("1. Registering provider agent...")
     async with TectonicClient(API_URL) as client:
         reg = await client.register_agent(
             AgentCreate(
-                name="BobSolver",
-                agent_type=AgentType.solver,
+                name="BobProvider",
+                agent_type=AgentType.provider,
                 wallet_address="0xabcdef1234567890abcdef1234567890abcdef12",
-                capabilities=SOLVER_CAPABILITIES,
+                capabilities=PROVIDER_CAPABILITIES,
             )
         )
-    solver_key = reg.api_key
-    solver_id = reg.agent.id
-    print(f"   Registered as {reg.agent.name} (id={solver_id})")
+    provider_key = reg.api_key
+    provider_id = reg.agent.id
+    print(f"   Registered as {reg.agent.name} (id={provider_id})")
     print(f"   Capabilities: {reg.agent.capabilities}\n")
 
-    async with TectonicClient(API_URL, api_key=solver_key) as solver:
+    async with TectonicClient(API_URL, api_key=provider_key) as provider:
 
         # ------------------------------------------------------------------
-        # Step 2: Browse open bounties
+        # Step 2: Browse open engagements
         # ------------------------------------------------------------------
-        print("2. Browsing open bounties...")
-        result = await solver.list_bounties(status="open")
-        print(f"   Found {result.total} open bounty(ies)")
+        print("2. Browsing open engagements...")
+        result = await provider.list_engagements(status="open")
+        print(f"   Found {result.total} open engagement(s)")
 
-        if not result.bounties:
-            print("   No open bounties found. Waiting for new bounties...")
+        if not result.engagements:
+            print("   No open engagements found. Waiting for new engagements...")
             for attempt in range(60):
-                result = await solver.list_bounties(status="open")
-                if result.bounties:
+                result = await provider.list_engagements(status="open")
+                if result.engagements:
                     break
                 await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
-        if not result.bounties:
-            print("   Still no bounties. Exiting.")
+        if not result.engagements:
+            print("   Still no engagements. Exiting.")
             sys.exit(1)
 
-        # Pick a bounty matching our capabilities (simple keyword match)
-        target_bounty = None
-        for b in result.bounties:
+        # Pick an engagement matching our capabilities (simple keyword match)
+        target_engagement = None
+        for b in result.engagements:
             description_lower = b.description.lower()
-            if any(cap in description_lower for cap in SOLVER_CAPABILITIES):
-                target_bounty = b
+            if any(cap in description_lower for cap in PROVIDER_CAPABILITIES):
+                target_engagement = b
                 break
 
-        if target_bounty is None:
+        if target_engagement is None:
             # Fallback: just pick the first one
-            target_bounty = result.bounties[0]
+            target_engagement = result.engagements[0]
 
-        print(f"   Selected bounty: {target_bounty.title}")
-        print(f"   Reward: {target_bounty.reward_amount} {target_bounty.reward_token}")
-        print(f"   Category: {target_bounty.category}")
-        print(f"   Criteria: {target_bounty.acceptance_criteria}\n")
+        print(f"   Selected engagement: {target_engagement.title}")
+        print(f"   Reward: {target_engagement.reward_amount} {target_engagement.reward_token}")
+        print(f"   Category: {target_engagement.category}")
+        print(f"   Criteria: {target_engagement.acceptance_criteria}\n")
 
         # ------------------------------------------------------------------
         # Step 3: Submit a proposal
         # ------------------------------------------------------------------
         print("3. Submitting proposal...")
-        proposal = await solver.create_proposal(
-            target_bounty.id,
+        proposal = await provider.create_proposal(
+            target_engagement.id,
             ProposalCreate(
-                proposed_price=target_bounty.reward_amount * 0.8,  # 20% discount
+                proposed_price=target_engagement.reward_amount * 0.8,  # 20% discount
                 proposed_deadline=datetime.now(timezone.utc) + timedelta(days=5),
                 approach_summary=(
                     "Will implement using Click for the CLI framework. "
@@ -121,48 +121,48 @@ async def main() -> None:
         # ------------------------------------------------------------------
         # Step 4: Wait for negotiation
         # ------------------------------------------------------------------
-        print("4. Waiting for poster to start negotiation...")
+        print("4. Waiting for requester to start negotiation...")
         negotiation = None
         for attempt in range(120):
-            # Re-fetch the bounty to check if negotiation started
-            current_bounty = await solver.get_bounty(target_bounty.id)
-            if current_bounty.status.value in ("negotiating", "agreed", "in_progress"):
-                # Try to find our negotiation -- check if the bounty moved forward
+            # Re-fetch the engagement to check if negotiation started
+            current_engagement = await provider.get_engagement(target_engagement.id)
+            if current_engagement.status.value in ("negotiating", "agreed", "in_progress"):
+                # Try to find our negotiation -- check if the engagement moved forward
                 # We need to poll the negotiation endpoint; for simplicity,
-                # we know the poster creates the negotiation, and we can look
+                # we know the requester creates the negotiation, and we can look
                 # for it via the proposals flow.
                 break
-            if current_bounty.status.value == "cancelled":
-                print("   Bounty was cancelled. Exiting.")
+            if current_engagement.status.value == "cancelled":
+                print("   Engagement was cancelled. Exiting.")
                 sys.exit(1)
             if attempt % 12 == 0 and attempt > 0:
                 print(f"   Still waiting... ({attempt * POLL_INTERVAL_SECONDS}s elapsed)")
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
         # In a real system, we would receive a webhook or have an endpoint
-        # to list negotiations for a solver. For this example, we assume
+        # to list negotiations for a provider. For this example, we assume
         # the negotiation ID is discoverable.
-        print("   Bounty status changed -- negotiation likely started.\n")
+        print("   Engagement status changed -- negotiation likely started.\n")
 
         # ------------------------------------------------------------------
         # Step 5: Negotiate (respond to counter-offers)
         # ------------------------------------------------------------------
         # For the demo, we assume we receive the negotiation_id through
         # some discovery mechanism (e.g., listing our active negotiations).
-        # We simulate by polling the bounty's negotiation.
+        # We simulate by polling the engagement's negotiation.
         if negotiation is None:
             print("5. Looking for active negotiation...")
             # In practice, there would be a /agents/{id}/negotiations endpoint
             # For the demo, we assume we know the negotiation ID from context
-            print("   (In production, solver would discover negotiation via notifications)\n")
+            print("   (In production, provider would discover negotiation via notifications)\n")
             print("   Skipping negotiation step -- see demo.py for full lifecycle.\n")
         else:
             print("5. Responding to negotiation...")
             # Check latest terms
-            neg = await solver.get_negotiation(negotiation.id)
+            neg = await provider.get_negotiation(negotiation.id)
             if neg.turn_count > 0 and neg.status.value == "active":
-                # Accept the poster's terms
-                accept_turn = await solver.submit_turn(
+                # Accept the requester's terms
+                accept_turn = await provider.submit_turn(
                     neg.id,
                     NegotiationTurnRequest(
                         turn_type=TurnType.accept,
@@ -176,7 +176,7 @@ async def main() -> None:
         # Step 6: Wait for contract funding
         # ------------------------------------------------------------------
         print("6. Waiting for contract to be funded...")
-        print("   (In production, solver monitors contract status)\n")
+        print("   (In production, provider monitors contract status)\n")
 
         # ------------------------------------------------------------------
         # Step 7: Submit delivery
@@ -186,22 +186,22 @@ async def main() -> None:
         # In a real scenario, we'd have the contract_id from the negotiation flow
         # For the demo, we show how the API call works:
         print("   Delivery would be submitted via:")
-        print("     await solver.deliver_contract(contract_id, ContractDeliverRequest(")
-        print('         deliverable_url="https://github.com/solver/csv-to-json"')
+        print("     await provider.deliver_contract(contract_id, ContractDeliverRequest(")
+        print('         deliverable_url="https://github.com/provider/csv-to-json"')
         print("     ))\n")
 
         # ------------------------------------------------------------------
         # Step 8: Wait for verification and settlement
         # ------------------------------------------------------------------
         print("8. Awaiting verification...")
-        print("   (Poster reviews deliverable and verifies against acceptance criteria)")
+        print("   (Requester reviews deliverable and verifies against acceptance criteria)")
 
         # Check reputation
-        rep = await solver.get_agent_reputation(solver_id)
+        rep = await provider.get_agent_reputation(provider_id)
         print(f"\n   Current reputation: {rep.reputation_score}")
-        print(f"   Bounties completed: {rep.bounties_completed}\n")
+        print(f"   Engagements completed: {rep.engagements_completed}\n")
 
-        print("=== Solver Agent Workflow Complete ===")
+        print("=== Provider Agent Workflow Complete ===")
         print("\nNote: For a full end-to-end lifecycle, run scripts/demo.py")
 
 

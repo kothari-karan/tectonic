@@ -9,8 +9,8 @@ from app.models.reputation import ReputationEvent, ReputationEventType
 
 # Reputation score weights
 SCORE_WEIGHTS: dict[str, float] = {
-    "bounty_completed": 10.0,
-    "bounty_posted": 2.0,
+    "engagement_completed": 10.0,
+    "engagement_posted": 2.0,
     "dispute_won": 5.0,
     "dispute_lost": -10.0,
 }
@@ -51,9 +51,7 @@ async def record_event(
 
 async def calculate_score(agent_id: uuid.UUID, db: AsyncSession) -> float:
     """Calculate an agent's total reputation score from all events."""
-    result = await db.execute(
-        select(ReputationEvent).where(ReputationEvent.agent_id == agent_id)
-    )
+    result = await db.execute(select(ReputationEvent).where(ReputationEvent.agent_id == agent_id))
     events = result.scalars().all()
 
     total = 0.0
@@ -63,9 +61,7 @@ async def calculate_score(agent_id: uuid.UUID, db: AsyncSession) -> float:
     return total
 
 
-async def get_agent_reputation(
-    agent_id: uuid.UUID, db: AsyncSession
-) -> dict:
+async def get_agent_reputation(agent_id: uuid.UUID, db: AsyncSession) -> dict:
     """Get an agent's reputation details."""
     agent = await db.get(Agent, agent_id)
     if agent is None:
@@ -81,8 +77,8 @@ async def get_agent_reputation(
     return {
         "agent_id": str(agent_id),
         "reputation_score": agent.reputation_score,
-        "bounties_posted": agent.bounties_posted,
-        "bounties_completed": agent.bounties_completed,
+        "engagements_posted": agent.engagements_posted,
+        "engagements_completed": agent.engagements_completed,
         "total_events": len(events),
         "recent_events": [
             {
